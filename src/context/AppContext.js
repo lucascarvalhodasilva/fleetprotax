@@ -10,12 +10,17 @@ export function AppProvider({ children }) {
   const [stationDistance, setStationDistance] = useState(0);
   const [employerRefundSettings, setEmployerRefundSettings] = useState({
     thresholdHours: 8.5,
-    amount: 8.0
+    amount: 8.0,
+    mileageRefundRate: 0.30
   });
   const [taxRates, setTaxRates] = useState({
     mealRate8h: 14.0,
     mealRate24h: 28.0,
-    mileageRate: 0.30
+    mileageRate: 0.30,
+    mileageRateCar: 0.30,
+    mileageRateMotorcycle: 0.20,
+    mileageRateBike: 0.05,
+    gwgLimit: 952.0
   });
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
@@ -34,7 +39,10 @@ export function AppProvider({ children }) {
     if (storedEquipment) setEquipmentEntries(JSON.parse(storedEquipment));
     if (storedStationDistance) setStationDistance(JSON.parse(storedStationDistance));
     if (storedRefundSettings) setEmployerRefundSettings(JSON.parse(storedRefundSettings));
-    if (storedTaxRates) setTaxRates(JSON.parse(storedTaxRates));
+    if (storedTaxRates) {
+      const parsedRates = JSON.parse(storedTaxRates);
+      setTaxRates(prev => ({ ...prev, ...parsedRates }));
+    }
     if (storedYear) setSelectedYear(JSON.parse(storedYear));
   }, []);
 

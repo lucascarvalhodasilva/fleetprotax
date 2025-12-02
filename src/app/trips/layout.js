@@ -3,6 +3,6 @@ export const metadata = {
   description: 'Verwalten Sie Ihre Werbungskosten, Verpflegungsmehraufwand und Fahrtkosten.',
 };
 
-export default function MealsLayout({ children }) {
+export default function TripsLayout({ children }) {
   return children;
 }

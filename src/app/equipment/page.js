@@ -1,9 +1,10 @@
 "use client";
 import { useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
+import NumberInput from '@/components/NumberInput';
 
 export default function EquipmentPage() {
-  const { equipmentEntries, addEquipmentEntry, deleteEquipmentEntry, selectedYear } = useAppContext();
+  const { equipmentEntries, addEquipmentEntry, deleteEquipmentEntry, selectedYear, taxRates } = useAppContext();
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -15,11 +16,12 @@ export default function EquipmentPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const price = parseFloat(formData.price);
-    const isDeductibleImmediately = price <= 952; // GWG limit
+    const gwgLimit = taxRates?.gwgLimit || 952;
+    const isDeductibleImmediately = price <= gwgLimit; // GWG limit
     
-    // If reimbursed, deductible is 0. If not reimbursed and <= 952, full price. If > 952, needs depreciation (simplified here to 0 for now or full price with warning)
-    // Requirement says: > 952 -> Nutzungsdauer berücksichtigen (optional).
-    // For simplicity, we'll mark it as "Abschreibung nötig" if > 952.
+    // If reimbursed, deductible is 0. If not reimbursed and <= gwgLimit, full price. If > gwgLimit, needs depreciation (simplified here to 0 for now or full price with warning)
+    // Requirement says: > gwgLimit -> Nutzungsdauer berücksichtigen (optional).
+    // For simplicity, we'll mark it as "Abschreibung nötig" if > gwgLimit.
     
     let deductibleAmount = 0;
     let status = '';
@@ -32,7 +34,7 @@ export default function EquipmentPage() {
       status = 'Sofort absetzbar (GWG)';
     } else {
       deductibleAmount = 0; // Or handle depreciation logic
-      status = 'Abschreibung erforderlich (> 952€)';
+      status = `Abschreibung erforderlich (> ${gwgLimit}€)`;
     }
 
     addEquipmentEntry({
@@ -55,10 +57,7 @@ export default function EquipmentPage() {
 
   return (
     <div className="space-y-8 py-8 container-custom">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Arbeitsmittel</h1>
-        <p className="text-muted-foreground mt-1">Verwalten Sie Ihre Arbeitsmittel und GWG (Geringwertige Wirtschaftsgüter).</p>
-      </div>
+      <p className="text-muted-foreground">Verwalten Sie Ihre Arbeitsmittel und GWG (Geringwertige Wirtschaftsgüter).</p>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Form */}
@@ -97,8 +96,7 @@ export default function EquipmentPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">Preis (Brutto €)</label>
-                <input
-                  type="number"
+                <NumberInput
                   step="0.01"
                   required
                   className="input-modern"
