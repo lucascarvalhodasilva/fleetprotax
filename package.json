@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy:android": "npm run build && npx cap sync android && cd android && ./gradlew installDebug"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
@@ -17,7 +18,7 @@
     "@capacitor/ios": "^7.4.4",
     "@capacitor/share": "^7.0.2",
     "jszip": "^3.10.1",
-    "next": "16.0.5",
+    "next": "^16.1.1",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
