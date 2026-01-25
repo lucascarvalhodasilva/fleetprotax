@@ -20,7 +20,7 @@ const KPIItem = ({ icon, label, value, variant = 'default', onClick }) => {
   const variants = {
     default: 'bg-gray-300/40 dark:bg-gray/5',
     negative: 'bg-red-50/80 dark:bg-red-400/10',
-    clickable: 'bg-yellow-500/40 cursor-pointer hover:bg-yellow-500/60 hover:scale-105',
+    clickable: 'bg-yellow-500/20 cursor-pointer hover:bg-yellow-500/60 hover:scale-105',
   };
 
   const textVariants = {
