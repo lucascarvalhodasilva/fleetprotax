@@ -22,7 +22,6 @@ const generateMockData = (currentYear) => {
       purpose: 'Kundentermin BMW',
       deductible: 70.0, // 2 full days + 2 travel days
       isMultiDay: true,
-      receiptFileName: 'trip-receipt-1001.pdf'
     },
     {
       id: 1002,
@@ -45,7 +44,6 @@ const generateMockData = (currentYear) => {
       purpose: 'Workshop Team Nord',
       deductible: 70.0,
       isMultiDay: true,
-      receiptFileName: 'trip-receipt-1003.jpg'
     },
     {
       id: 1004,
@@ -68,7 +66,6 @@ const generateMockData = (currentYear) => {
       purpose: 'Projektstart Kunde XYZ',
       deductible: 126.0,
       isMultiDay: true,
-      receiptFileName: 'trip-receipt-1005.pdf'
     },
     // April trips
     {
@@ -102,7 +99,6 @@ const generateMockData = (currentYear) => {
       purpose: 'Audit Qualitätsmanagement',
       deductible: 14.0,
       isMultiDay: false,
-      receiptFileName: 'trip-receipt-1008.jpg'
     },
     // June trips
     {
@@ -115,7 +111,6 @@ const generateMockData = (currentYear) => {
       purpose: 'Internationale Konferenz',
       deductible: 140.0,
       isMultiDay: true,
-      receiptFileName: 'trip-receipt-1009.pdf'
     },
     // July trips (Phase 1.1)
     {
@@ -138,7 +133,6 @@ const generateMockData = (currentYear) => {
       purpose: 'Sommerseminar',
       deductible: 70.0,
       isMultiDay: true,
-      receiptFileName: 'trip-receipt-1011.pdf'
     },
     // August trips (Phase 1.1)
     {
@@ -183,7 +177,6 @@ const generateMockData = (currentYear) => {
       purpose: 'Produktpräsentation',
       deductible: 70.0,
       isMultiDay: true,
-      receiptFileName: 'trip-receipt-1015.pdf'
     },
     // October trips (Phase 1.1)
     {
@@ -206,7 +199,6 @@ const generateMockData = (currentYear) => {
       purpose: 'Technisches Audit',
       deductible: 14.0,
       isMultiDay: false,
-      receiptFileName: 'trip-receipt-1017.jpg'
     },
     // November trips (Phase 1.1)
     {
@@ -251,20 +243,19 @@ const generateMockData = (currentYear) => {
       purpose: 'Jahresabschluss-Workshop',
       deductible: 98.0,
       isMultiDay: true,
-      receiptFileName: 'trip-receipt-1021.pdf'
     }
   ];
 
   const mockMileageEntries = [
     // January - Car
-    { id: 2001, date: `${currentYear}-01-06`, distance: 285, allowance: 85.50, vehicleType: 'car', relatedTripId: 1001, destination: 'München', receiptFileName: 'mileage-receipt-2001.pdf' },
+    { id: 2001, date: `${currentYear}-01-06`, distance: 285, allowance: 85.50, vehicleType: 'car', relatedTripId: 1001, destination: 'München' },
     { id: 2002, date: `${currentYear}-01-08`, distance: 285, allowance: 85.50, vehicleType: 'car', relatedTripId: 1001, destination: 'München (Rückfahrt)' },
     { id: 2003, date: `${currentYear}-01-15`, distance: 210, allowance: 63.00, vehicleType: 'car', relatedTripId: 1002, destination: 'Stuttgart' },
     { id: 2004, date: `${currentYear}-01-13`, distance: 95, allowance: 28.50, vehicleType: 'car', relatedTripId: 1010, destination: 'Mannheim' },
     { id: 2005, date: `${currentYear}-01-17`, distance: 320, allowance: 96.00, vehicleType: 'car', relatedTripId: 1011, destination: 'Leipzig' },
     { id: 2006, date: `${currentYear}-01-19`, distance: 320, allowance: 96.00, vehicleType: 'car', relatedTripId: 1011, destination: 'Leipzig (Rückfahrt)' },
     // February - Car
-    { id: 2007, date: `${currentYear}-02-03`, distance: 470, allowance: 141.00, vehicleType: 'car', relatedTripId: 1003, destination: 'Hamburg', receiptFileName: 'mileage-receipt-2007.jpg' },
+    { id: 2007, date: `${currentYear}-02-03`, distance: 470, allowance: 141.00, vehicleType: 'car', relatedTripId: 1003, destination: 'Hamburg' },
     { id: 2008, date: `${currentYear}-02-05`, distance: 470, allowance: 141.00, vehicleType: 'car', relatedTripId: 1003, destination: 'Hamburg (Rückfahrt)' },
     { id: 2009, date: `${currentYear}-02-20`, distance: 180, allowance: 54.00, vehicleType: 'car', relatedTripId: 1004, destination: 'Frankfurt' },
     // March - Car
@@ -276,8 +267,8 @@ const generateMockData = (currentYear) => {
     { id: 2014, date: `${currentYear}-04-24`, distance: 220, allowance: 66.00, vehicleType: 'car', relatedTripId: 1007, destination: 'Düsseldorf (Rückfahrt)' },
     { id: 2021, date: `${currentYear}-04-15`, distance: 12, allowance: 0.60, vehicleType: 'bike', destination: 'Lokaler Kunde - Stadtmitte' },
     // May - Car, Motorcycle, Bike
-    { id: 2015, date: `${currentYear}-05-12`, distance: 165, allowance: 49.50, vehicleType: 'car', relatedTripId: 1008, destination: 'Nürnberg', receiptFileName: 'mileage-receipt-2015.pdf' },
-    { id: 2018, date: `${currentYear}-05-20`, distance: 45, allowance: 9.00, vehicleType: 'motorcycle', destination: 'Heidelberg - Kurzstrecke', receiptFileName: 'mileage-receipt-2018.jpg' },
+    { id: 2015, date: `${currentYear}-05-12`, distance: 165, allowance: 49.50, vehicleType: 'car', relatedTripId: 1008, destination: 'Nürnberg' },
+    { id: 2018, date: `${currentYear}-05-20`, distance: 45, allowance: 9.00, vehicleType: 'motorcycle', destination: 'Heidelberg - Kurzstrecke' },
     { id: 2022, date: `${currentYear}-05-03`, distance: 8, allowance: 0.40, vehicleType: 'bike', destination: 'Stadtbüro - Meeting' },
     // June - Car, Motorcycle
     { id: 2016, date: `${currentYear}-06-02`, distance: 420, allowance: 126.00, vehicleType: 'car', relatedTripId: 1009, destination: 'Wien' },
@@ -285,18 +276,18 @@ const generateMockData = (currentYear) => {
     { id: 2019, date: `${currentYear}-06-10`, distance: 85, allowance: 17.00, vehicleType: 'motorcycle', destination: 'Karlsruhe - Kundentermin' },
     // July - Car
     { id: 2036, date: `${currentYear}-07-08`, distance: 65, allowance: 19.50, vehicleType: 'car', relatedTripId: 1010, destination: 'Essen' },
-    { id: 2037, date: `${currentYear}-07-22`, distance: 260, allowance: 78.00, vehicleType: 'car', relatedTripId: 1011, destination: 'Salzburg', receiptFileName: 'mileage-receipt-2037.pdf' },
+    { id: 2037, date: `${currentYear}-07-22`, distance: 260, allowance: 78.00, vehicleType: 'car', relatedTripId: 1011, destination: 'Salzburg' },
     { id: 2038, date: `${currentYear}-07-24`, distance: 260, allowance: 78.00, vehicleType: 'car', relatedTripId: 1011, destination: 'Salzburg (Rückfahrt)' },
     // August - Car, Motorcycle
     { id: 2039, date: `${currentYear}-08-05`, distance: 130, allowance: 39.00, vehicleType: 'car', relatedTripId: 1012, destination: 'Bonn' },
     { id: 2040, date: `${currentYear}-08-19`, distance: 340, allowance: 102.00, vehicleType: 'car', relatedTripId: 1013, destination: 'Graz' },
     { id: 2041, date: `${currentYear}-08-21`, distance: 340, allowance: 102.00, vehicleType: 'car', relatedTripId: 1013, destination: 'Graz (Rückfahrt)' },
-    { id: 2020, date: `${currentYear}-08-15`, distance: 120, allowance: 24.00, vehicleType: 'motorcycle', destination: 'Freiburg - Workshop', receiptFileName: 'mileage-receipt-2020.pdf' },
+    { id: 2020, date: `${currentYear}-08-15`, distance: 120, allowance: 24.00, vehicleType: 'motorcycle', destination: 'Freiburg - Workshop' },
     // September - Car, Bike
     { id: 2024, date: `${currentYear}-09-05`, distance: 195, allowance: 58.50, vehicleType: 'car', relatedTripId: 1014, destination: 'Dresden' },
     { id: 2025, date: `${currentYear}-09-18`, distance: 240, allowance: 72.00, vehicleType: 'car', relatedTripId: 1015, destination: 'Hannover' },
     { id: 2026, date: `${currentYear}-09-20`, distance: 240, allowance: 72.00, vehicleType: 'car', relatedTripId: 1015, destination: 'Hannover (Rückfahrt)' },
-    { id: 2023, date: `${currentYear}-09-20`, distance: 15, allowance: 0.75, vehicleType: 'bike', destination: 'Nahversorgung - Büromaterial', receiptFileName: 'mileage-receipt-2023.jpg' },
+    { id: 2023, date: `${currentYear}-09-20`, distance: 15, allowance: 0.75, vehicleType: 'bike', destination: 'Nahversorgung - Büromaterial' },
     // October - Car
     { id: 2027, date: `${currentYear}-10-12`, distance: 310, allowance: 93.00, vehicleType: 'car', relatedTripId: 1016, destination: 'Zürich' },
     { id: 2028, date: `${currentYear}-10-15`, distance: 310, allowance: 93.00, vehicleType: 'car', relatedTripId: 1016, destination: 'Zürich (Rückfahrt)' },
@@ -307,7 +298,7 @@ const generateMockData = (currentYear) => {
     { id: 2032, date: `${currentYear}-11-21`, distance: 105, allowance: 31.50, vehicleType: 'car', relatedTripId: 1019, destination: 'Dortmund (Rückfahrt)' },
     // December - Car
     { id: 2033, date: `${currentYear}-12-05`, distance: 88, allowance: 26.40, vehicleType: 'car', relatedTripId: 1020, destination: 'Wiesbaden' },
-    { id: 2034, date: `${currentYear}-12-15`, distance: 420, allowance: 126.00, vehicleType: 'car', relatedTripId: 1021, destination: 'Wien', receiptFileName: 'mileage-receipt-2034.pdf' },
+    { id: 2034, date: `${currentYear}-12-15`, distance: 420, allowance: 126.00, vehicleType: 'car', relatedTripId: 1021, destination: 'Wien' },
     { id: 2035, date: `${currentYear}-12-18`, distance: 420, allowance: 126.00, vehicleType: 'car', relatedTripId: 1021, destination: 'Wien (Rückfahrt)' }
   ];
 
@@ -328,43 +319,43 @@ const generateMockData = (currentYear) => {
 
   const mockEquipmentEntries = [
     // Current year equipment
-    { id: 4001, date: `${currentYear}-01-10`, name: 'Laptop Dell XPS 15', price: 1899.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4001.pdf' },
-    { id: 4002, date: `${currentYear}-02-15`, name: 'Monitor 27" 4K', price: 449.00, category: 'IT-Ausstattung', depreciationYears: 0, receiptFileName: 'equipment-receipt-4002.pdf' },
-    { id: 4003, date: `${currentYear}-03-20`, name: 'Bürostuhl ergonomisch', price: 650.00, category: 'Büromöbel', depreciationYears: 0, receiptFileName: 'equipment-receipt-4003.jpg' },
-    { id: 4004, date: `${currentYear}-04-05`, name: 'Externe Festplatte 2TB', price: 89.00, category: 'IT-Ausstattung', depreciationYears: 0, receiptFileName: 'equipment-receipt-4004.pdf' },
+    { id: 4001, date: `${currentYear}-01-10`, name: 'Laptop Dell XPS 15', price: 1899.00, category: 'IT-Ausstattung', depreciationYears: 3 },
+    { id: 4002, date: `${currentYear}-02-15`, name: 'Monitor 27" 4K', price: 449.00, category: 'IT-Ausstattung', depreciationYears: 0 },
+    { id: 4003, date: `${currentYear}-03-20`, name: 'Bürostuhl ergonomisch', price: 650.00, category: 'Büromöbel', depreciationYears: 0 },
+    { id: 4004, date: `${currentYear}-04-05`, name: 'Externe Festplatte 2TB', price: 89.00, category: 'IT-Ausstattung', depreciationYears: 0 },
     // GWG Boundary Cases (Phase 1.2)
-    { id: 4005, date: `${currentYear}-05-10`, name: 'Stehtisch elektrisch', price: 952.00, category: 'Büromöbel', depreciationYears: 0, receiptFileName: 'equipment-receipt-4005.pdf' },
-    { id: 4006, date: `${currentYear}-06-01`, name: 'Konferenztisch hochwertig', price: 953.00, category: 'Büromöbel', depreciationYears: 3, receiptFileName: 'equipment-receipt-4006.pdf' },
-    { id: 4007, date: `${currentYear}-03-15`, name: 'Server Dell PowerEdge', price: 4500.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4007.pdf' },
-    { id: 4008, date: `${currentYear}-07-20`, name: 'Projektor HD', price: 951.00, category: 'Präsentationstechnik', depreciationYears: 0, receiptFileName: 'equipment-receipt-4008.jpg' },
+    { id: 4005, date: `${currentYear}-05-10`, name: 'Stehtisch elektrisch', price: 952.00, category: 'Büromöbel', depreciationYears: 0 },
+    { id: 4006, date: `${currentYear}-06-01`, name: 'Konferenztisch hochwertig', price: 953.00, category: 'Büromöbel', depreciationYears: 3 },
+    { id: 4007, date: `${currentYear}-03-15`, name: 'Server Dell PowerEdge', price: 4500.00, category: 'IT-Ausstattung', depreciationYears: 3 },
+    { id: 4008, date: `${currentYear}-07-20`, name: 'Projektor HD', price: 951.00, category: 'Präsentationstechnik', depreciationYears: 0 },
     // Previous year equipment - Year 2 of depreciation (Phase 1.5)
-    { id: 4100, date: `${currentYear - 1}-03-15`, name: 'MacBook Pro 16" M2', price: 2899.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4100.pdf' },
-    { id: 4101, date: `${currentYear - 1}-08-20`, name: 'Drucker Multifunktion HP', price: 1200.00, category: 'Büroausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4101.pdf' },
+    { id: 4100, date: `${currentYear - 1}-03-15`, name: 'MacBook Pro 16" M2', price: 2899.00, category: 'IT-Ausstattung', depreciationYears: 3 },
+    { id: 4101, date: `${currentYear - 1}-08-20`, name: 'Drucker Multifunktion HP', price: 1200.00, category: 'Büroausstattung', depreciationYears: 3 },
     // Two years ago - Year 3/final year of depreciation (Phase 1.5)
-    { id: 4200, date: `${currentYear - 2}-05-10`, name: 'Monitor Setup 3x 27" Dell', price: 1500.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4200.pdf' },
-    { id: 4201, date: `${currentYear - 2}-11-05`, name: 'Schreibtisch höhenverstellbar', price: 1100.00, category: 'Büromöbel', depreciationYears: 3, receiptFileName: 'equipment-receipt-4201.jpg' }
+    { id: 4200, date: `${currentYear - 2}-05-10`, name: 'Monitor Setup 3x 27" Dell', price: 1500.00, category: 'IT-Ausstattung', depreciationYears: 3 },
+    { id: 4201, date: `${currentYear - 2}-11-05`, name: 'Schreibtisch höhenverstellbar', price: 1100.00, category: 'Büromöbel', depreciationYears: 3 }
   ];
 
   const mockExpenseEntries = [
-    { id: 5001, date: `${currentYear}-01-05`, description: 'Fachliteratur Steuerwesen', amount: 45.00, category: 'Bücher', receiptFileName: 'expense-receipt-5001.pdf' },
-    { id: 5002, date: `${currentYear}-01-15`, description: 'Office 365 Jahresabo', amount: 99.00, category: 'Software', receiptFileName: 'expense-receipt-5002.pdf' },
+    { id: 5001, date: `${currentYear}-01-05`, description: 'Fachliteratur Steuerwesen', amount: 45.00, category: 'Bücher' },
+    { id: 5002, date: `${currentYear}-01-15`, description: 'Office 365 Jahresabo', amount: 99.00, category: 'Software' },
     { id: 5003, date: `${currentYear}-01-22`, description: 'Druckerpapier & Toner', amount: 78.00, category: 'Büromaterial' },
-    { id: 5004, date: `${currentYear}-02-03`, description: 'USB-C Adapter', amount: 29.90, category: 'IT-Zubehör', receiptFileName: 'expense-receipt-5004.jpg' },
+    { id: 5004, date: `${currentYear}-02-03`, description: 'USB-C Adapter', amount: 29.90, category: 'IT-Zubehör' },
     { id: 5005, date: `${currentYear}-02-14`, description: 'Visitenkarten 500 Stück', amount: 35.00, category: 'Marketing' },
-    { id: 5006, date: `${currentYear}-02-28`, description: 'Webcam HD Logitech', amount: 89.00, category: 'IT-Zubehör', receiptFileName: 'expense-receipt-5006.pdf' },
+    { id: 5006, date: `${currentYear}-02-28`, description: 'Webcam HD Logitech', amount: 89.00, category: 'IT-Zubehör' },
     { id: 5007, date: `${currentYear}-03-07`, description: 'Arbeitshandschuhe 10er Pack', amount: 24.50, category: 'Arbeitskleidung' },
-    { id: 5008, date: `${currentYear}-03-18`, description: 'Fachliteratur Projektmanagement', amount: 52.00, category: 'Bücher', receiptFileName: 'expense-receipt-5008.pdf' },
+    { id: 5008, date: `${currentYear}-03-18`, description: 'Fachliteratur Projektmanagement', amount: 52.00, category: 'Bücher' },
     { id: 5009, date: `${currentYear}-03-25`, description: 'Bildschirmreiniger Set', amount: 15.90, category: 'Büromaterial' },
     { id: 5010, date: `${currentYear}-04-02`, description: 'Kabelmanagement Schreibtisch', amount: 19.99, category: 'Büromaterial' },
-    { id: 5011, date: `${currentYear}-04-12`, description: 'Präsentationsmaterial', amount: 67.50, category: 'Marketing', receiptFileName: 'expense-receipt-5011.jpg' },
+    { id: 5011, date: `${currentYear}-04-12`, description: 'Präsentationsmaterial', amount: 67.50, category: 'Marketing' },
     { id: 5012, date: `${currentYear}-04-28`, description: 'Antivirensoftware 1 Jahr', amount: 39.99, category: 'Software' },
     { id: 5013, date: `${currentYear}-05-08`, description: 'Schreibtischlampe LED', amount: 49.90, category: 'Büromöbel' },
-    { id: 5014, date: `${currentYear}-05-19`, description: 'Bluetooth Maus', amount: 34.99, category: 'IT-Zubehör', receiptFileName: 'expense-receipt-5014.pdf' },
+    { id: 5014, date: `${currentYear}-05-19`, description: 'Bluetooth Maus', amount: 34.99, category: 'IT-Zubehör' },
     { id: 5015, date: `${currentYear}-05-30`, description: 'Kalender & Planer 2026', amount: 18.50, category: 'Büromaterial' },
-    { id: 5016, date: `${currentYear}-06-05`, description: 'Kopfhörer Noise Cancelling', amount: 159.00, category: 'IT-Zubehör', receiptFileName: 'expense-receipt-5016.pdf' },
-    { id: 5017, date: `${currentYear}-06-16`, description: 'Cloud-Speicher Jahresabo', amount: 119.00, category: 'Software', receiptFileName: 'expense-receipt-5017.pdf' },
+    { id: 5016, date: `${currentYear}-06-05`, description: 'Kopfhörer Noise Cancelling', amount: 159.00, category: 'IT-Zubehör' },
+    { id: 5017, date: `${currentYear}-06-16`, description: 'Cloud-Speicher Jahresabo', amount: 119.00, category: 'Software' },
     { id: 5018, date: `${currentYear}-06-27`, description: 'Dokumentenhalter', amount: 22.90, category: 'Büromaterial' },
-    { id: 5019, date: `${currentYear}-07-10`, description: 'Sicherheitsschuhe S3', amount: 89.00, category: 'Arbeitskleidung', receiptFileName: 'expense-receipt-5019.jpg' },
+    { id: 5019, date: `${currentYear}-07-10`, description: 'Sicherheitsschuhe S3', amount: 89.00, category: 'Arbeitskleidung' },
     { id: 5020, date: `${currentYear}-07-21`, description: 'VPN Service 1 Jahr', amount: 59.00, category: 'Software' }
   ];
 
