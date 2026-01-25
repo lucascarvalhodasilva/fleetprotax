@@ -87,19 +87,22 @@ export default function SpesenQuickAdd({ year, onAdd, existingSpesen }) {
   };
 
   return (
-    <div className="p-4 bg-yellow-50 dark:bg-yellow-500/10 rounded-xl">
-      <h3 className="text-sm font-medium text-yellow-900 dark:text-yellow-400 mb-3">
-        ➕ Schnell hinzufügen
-      </h3>
+    <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-100 rounded-2xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg">➕</span>
+        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+          Schnell hinzufügen
+        </h3>
+      </div>
       
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Month Selector */}
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">Monat</label>
+          <label className="block text-xs font-medium text-gray-700 mb-2">Monat</label>
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-            className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+            className="w-full px-3 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-shadow"
           >
             {months.map((month, index) => (
               <option key={index + 1} value={index + 1}>
@@ -111,7 +114,7 @@ export default function SpesenQuickAdd({ year, onAdd, existingSpesen }) {
 
         {/* Amount Input */}
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">Betrag</label>
+          <label className="block text-xs font-medium text-gray-700 mb-2">Betrag</label>
           <div className="relative">
             <input
               type="number"
@@ -120,16 +123,16 @@ export default function SpesenQuickAdd({ year, onAdd, existingSpesen }) {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 pr-8"
+              className="w-full px-3 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 pr-10 transition-shadow"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">€</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">€</span>
           </div>
         </div>
 
         {/* Note Input (Optional) */}
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">
-            Notiz <span className="text-xs text-muted-foreground/60">(optional, max 200 Zeichen)</span>
+          <label className="block text-xs font-medium text-gray-700 mb-2">
+            Notiz <span className="text-xs text-gray-400">(optional, max 200 Zeichen)</span>
           </label>
           <input
             type="text"
@@ -137,16 +140,16 @@ export default function SpesenQuickAdd({ year, onAdd, existingSpesen }) {
             onChange={(e) => setNote(e.target.value)}
             placeholder="z.B. Monatspauschale"
             maxLength={200}
-            className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+            className="w-full px-3 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-shadow"
           />
           {note && (
-            <p className="text-xs text-muted-foreground/60 mt-1">{note.length}/200</p>
+            <p className="text-xs text-gray-400 mt-1.5">{note.length}/200</p>
           )}
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-3 py-2 rounded-lg">
+          <div className="text-xs text-red-600 bg-red-50 px-3 py-2.5 rounded-xl border border-red-100">
             {error}
           </div>
         )}
@@ -154,7 +157,7 @@ export default function SpesenQuickAdd({ year, onAdd, existingSpesen }) {
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-full px-4 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg transition-colors"
+          className="w-full px-4 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white text-sm font-semibold rounded-xl transition-all shadow-sm hover:shadow-md"
         >
           Hinzufügen
         </button>
