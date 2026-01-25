@@ -13,7 +13,6 @@ export const useMonthlyTaxData = (year) => {
     tripEntries, 
     mileageEntries, 
     equipmentEntries, 
-    expenseEntries,
     monthlyEmployerExpenses,
     taxRates 
   } = useAppContext();
@@ -33,15 +32,9 @@ export const useMonthlyTaxData = (year) => {
         return date.getMonth() + 1 === month && date.getFullYear() === year;
       });
       
-      const monthExpenses = (expenseEntries || []).filter(e => {
-        const date = new Date(e.date);
-        return date.getMonth() + 1 === month && date.getFullYear() === year;
-      });
-      
       // Calculate totals
       const tripsDeductible = monthTrips.reduce((sum, t) => sum + (t.deductible || 0), 0);
       const mileageDeductible = monthMileage.reduce((sum, m) => sum + (m.allowance || 0), 0);
-      const expensesDeductible = monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
       
       // Calculate equipment depreciation for this month
       const equipmentDeductible = calculateMonthlyEquipmentDepreciation(
@@ -70,7 +63,7 @@ export const useMonthlyTaxData = (year) => {
         net: netDeductible
       };
     });
-  }, [tripEntries, mileageEntries, equipmentEntries, expenseEntries, monthlyEmployerExpenses, year, taxRates]);
+  }, [tripEntries, mileageEntries, equipmentEntries, monthlyEmployerExpenses, year, taxRates]);
 
   return monthlyData;
 };
