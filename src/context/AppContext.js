@@ -328,21 +328,21 @@ const generateMockData = (currentYear) => {
 
   const mockEquipmentEntries = [
     // Current year equipment
-    { id: 4001, date: `${currentYear}-01-10`, name: 'Laptop Dell XPS 15', amount: 1899.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4001.pdf' },
-    { id: 4002, date: `${currentYear}-02-15`, name: 'Monitor 27" 4K', amount: 449.00, category: 'IT-Ausstattung', depreciationYears: 0, receiptFileName: 'equipment-receipt-4002.pdf' },
-    { id: 4003, date: `${currentYear}-03-20`, name: 'Bürostuhl ergonomisch', amount: 650.00, category: 'Büromöbel', depreciationYears: 0, receiptFileName: 'equipment-receipt-4003.jpg' },
-    { id: 4004, date: `${currentYear}-04-05`, name: 'Externe Festplatte 2TB', amount: 89.00, category: 'IT-Ausstattung', depreciationYears: 0, receiptFileName: 'equipment-receipt-4004.pdf' },
+    { id: 4001, date: `${currentYear}-01-10`, name: 'Laptop Dell XPS 15', price: 1899.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4001.pdf' },
+    { id: 4002, date: `${currentYear}-02-15`, name: 'Monitor 27" 4K', price: 449.00, category: 'IT-Ausstattung', depreciationYears: 0, receiptFileName: 'equipment-receipt-4002.pdf' },
+    { id: 4003, date: `${currentYear}-03-20`, name: 'Bürostuhl ergonomisch', price: 650.00, category: 'Büromöbel', depreciationYears: 0, receiptFileName: 'equipment-receipt-4003.jpg' },
+    { id: 4004, date: `${currentYear}-04-05`, name: 'Externe Festplatte 2TB', price: 89.00, category: 'IT-Ausstattung', depreciationYears: 0, receiptFileName: 'equipment-receipt-4004.pdf' },
     // GWG Boundary Cases (Phase 1.2)
-    { id: 4005, date: `${currentYear}-05-10`, name: 'Stehtisch elektrisch', amount: 952.00, category: 'Büromöbel', depreciationYears: 0, receiptFileName: 'equipment-receipt-4005.pdf' },
-    { id: 4006, date: `${currentYear}-06-01`, name: 'Konferenztisch hochwertig', amount: 953.00, category: 'Büromöbel', depreciationYears: 3, receiptFileName: 'equipment-receipt-4006.pdf' },
-    { id: 4007, date: `${currentYear}-03-15`, name: 'Server Dell PowerEdge', amount: 4500.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4007.pdf' },
-    { id: 4008, date: `${currentYear}-07-20`, name: 'Projektor HD', amount: 951.00, category: 'Präsentationstechnik', depreciationYears: 0, receiptFileName: 'equipment-receipt-4008.jpg' },
+    { id: 4005, date: `${currentYear}-05-10`, name: 'Stehtisch elektrisch', price: 952.00, category: 'Büromöbel', depreciationYears: 0, receiptFileName: 'equipment-receipt-4005.pdf' },
+    { id: 4006, date: `${currentYear}-06-01`, name: 'Konferenztisch hochwertig', price: 953.00, category: 'Büromöbel', depreciationYears: 3, receiptFileName: 'equipment-receipt-4006.pdf' },
+    { id: 4007, date: `${currentYear}-03-15`, name: 'Server Dell PowerEdge', price: 4500.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4007.pdf' },
+    { id: 4008, date: `${currentYear}-07-20`, name: 'Projektor HD', price: 951.00, category: 'Präsentationstechnik', depreciationYears: 0, receiptFileName: 'equipment-receipt-4008.jpg' },
     // Previous year equipment - Year 2 of depreciation (Phase 1.5)
-    { id: 4100, date: `${currentYear - 1}-03-15`, name: 'MacBook Pro 16" M2', amount: 2899.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4100.pdf' },
-    { id: 4101, date: `${currentYear - 1}-08-20`, name: 'Drucker Multifunktion HP', amount: 1200.00, category: 'Büroausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4101.pdf' },
+    { id: 4100, date: `${currentYear - 1}-03-15`, name: 'MacBook Pro 16" M2', price: 2899.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4100.pdf' },
+    { id: 4101, date: `${currentYear - 1}-08-20`, name: 'Drucker Multifunktion HP', price: 1200.00, category: 'Büroausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4101.pdf' },
     // Two years ago - Year 3/final year of depreciation (Phase 1.5)
-    { id: 4200, date: `${currentYear - 2}-05-10`, name: 'Monitor Setup 3x 27" Dell', amount: 1500.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4200.pdf' },
-    { id: 4201, date: `${currentYear - 2}-11-05`, name: 'Schreibtisch höhenverstellbar', amount: 1100.00, category: 'Büromöbel', depreciationYears: 3, receiptFileName: 'equipment-receipt-4201.jpg' }
+    { id: 4200, date: `${currentYear - 2}-05-10`, name: 'Monitor Setup 3x 27" Dell', price: 1500.00, category: 'IT-Ausstattung', depreciationYears: 3, receiptFileName: 'equipment-receipt-4200.pdf' },
+    { id: 4201, date: `${currentYear - 2}-11-05`, name: 'Schreibtisch höhenverstellbar', price: 1100.00, category: 'Büromöbel', depreciationYears: 3, receiptFileName: 'equipment-receipt-4201.jpg' }
   ];
 
   const mockExpenseEntries = [
