@@ -36,10 +36,17 @@ export default function TaxDeductibleChart({ year }) {
           scaleType: 'band', 
           dataKey: 'month',
           categoryGapRatio: 0.3,
-          barGapRatio: 0.1
+          barGapRatio: 0.1,
+          tickLabelStyle: {
+            fill: 'rgba(255, 255, 255, 0.7)',
+            fontSize: 12,
+          },
         }]}
         yAxis={[{
-          label: 'Betrag (€)',
+          tickLabelStyle: {
+            fill: 'rgba(255, 255, 255, 0.7)',
+            fontSize: 12,
+          },
         }]}
         series={[
           {
@@ -61,37 +68,66 @@ export default function TaxDeductibleChart({ year }) {
             valueFormatter: (value) => `${value?.toFixed(2) || '0.00'} €`
           }
         ]}
-        margin={{ top: 20, right: 20, bottom: 60, left: 70 }}
+        margin={{ top: 20, right: 20, bottom: 40, left: 10 }}
         slotProps={{
           legend: {
             direction: 'row',
             position: { vertical: 'bottom', horizontal: 'middle' },
             padding: 0,
-            itemMarkWidth: 12,
-            itemMarkHeight: 12,
-            markGap: 6,
-            itemGap: 16,
           },
         }}
         sx={{
-          // White axes and text for primary background
-          '.MuiChartsAxis-line': { 
-            stroke: 'rgba(255, 255, 255, 0.3)' 
+          // Dimmed white axes - using !important for Android WebView compatibility
+          '& .MuiChartsAxis-line': { 
+            stroke: 'rgba(255, 255, 255, 0.5) !important' 
           },
-          '.MuiChartsAxis-tick': { 
-            stroke: 'rgba(255, 255, 255, 0.3)' 
+          '& .MuiChartsAxis-tick': { 
+            stroke: 'rgba(255, 255, 255, 0.5) !important' 
           },
-          '.MuiChartsAxis-tickLabel': { 
-            fill: 'rgba(255, 255, 255, 0.9)',
+          '& .MuiChartsAxis-tickLabel': { 
+            fill: 'rgba(255, 255, 255, 0.7) !important',
             fontSize: '0.75rem'
           },
-          '.MuiChartsAxis-label': { 
-            fill: 'rgba(255, 255, 255, 0.9)',
+          '& .MuiChartsAxis-label': { 
+            fill: 'rgba(255, 255, 255, 0.7) !important',
             fontSize: '0.875rem'
           },
+          // Direct SVG line targeting for axis lines
+          '& line': {
+            stroke: 'rgba(255, 255, 255, 0.5) !important'
+          },
+          '& .MuiChartsAxis-root line': {
+            stroke: 'rgba(255, 255, 255, 0.5) !important'
+          },
           '.MuiChartsLegend-series text': { 
-            fill: 'rgba(255, 255, 255, 0.9) !important',
+            fill: 'rgba(255, 255, 255, 0.7) !important',
             fontSize: '0.75rem'
+          },
+          '& .MuiChartsLegend-series text': { 
+            fill: 'rgba(255, 255, 255, 0.7) !important',
+            fontSize: '0.75rem'
+          },
+          '& .MuiChartsLegend-root text': { 
+            fill: 'rgba(255, 255, 255, 0.7) !important',
+          },
+          // Legend is rendered as HTML in MUI X Charts v8
+          '& .MuiChartsLegend-root': {
+            color: 'rgba(255, 255, 255, 0.7) !important',
+          },
+          '& .MuiChartsLegend-root span': {
+            color: 'rgba(255, 255, 255, 0.7) !important',
+          },
+          '& .MuiChartsLegend-label': {
+            color: 'rgba(255, 255, 255, 0.7) !important',
+          },
+          '& ul': {
+            color: 'rgba(255, 255, 255, 0.7) !important',
+          },
+          '& li': {
+            color: 'rgba(255, 255, 255, 0.7) !important',
+          },
+          '& text': {
+            fill: 'rgba(255, 255, 255, 0.7) !important',
           },
           '.MuiChartsLegend-mark': {
             rx: 2
