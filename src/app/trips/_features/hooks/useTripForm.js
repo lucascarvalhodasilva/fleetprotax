@@ -5,6 +5,16 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
 /**
+ * Default commute configuration
+ */
+const DEFAULT_COMMUTE = {
+  car: { active: true, distance: 0 },
+  motorcycle: { active: false, distance: 0 },
+  bike: { active: false, distance: 0 },
+  public_transport: { active: false, cost: '' }
+};
+
+/**
  * Hook to manage trip form state and submission logic.
  */
 export const useTripForm = () => {
@@ -27,12 +37,7 @@ export const useTripForm = () => {
     startTime: '',
     endTime: '',
     employerExpenses: 0,
-    commute: {
-      car: { active: true, distance: 0 },
-      motorcycle: { active: false, distance: 0 },
-      bike: { active: false, distance: 0 },
-      public_transport: { active: false, cost: '' }
-    }
+    commute: DEFAULT_COMMUTE
   });
 
   const [autoAddStationTrips, setAutoAddStationTrips] = useState(true);
@@ -436,12 +441,7 @@ export const useTripForm = () => {
       startTime: '',
       endTime: '',
       employerExpenses: 0,
-      commute: defaultCommute || {
-        car: { active: true, distance: 0 },
-        motorcycle: { active: false, distance: 0 },
-        bike: { active: false, distance: 0 },
-        public_transport: { active: false, cost: '' }
-      }
+      commute: defaultCommute || DEFAULT_COMMUTE
     });
     
     setTempPublicTransportReceipt(null);
@@ -467,12 +467,7 @@ export const useTripForm = () => {
       startTime: entry.startTime || '',
       endTime: entry.endTime || '',
       employerExpenses: entry.employerExpenses || 0,
-      commute: entry.commute || defaultCommute || {
-        car: { active: true, distance: 0 },
-        motorcycle: { active: false, distance: 0 },
-        bike: { active: false, distance: 0 },
-        public_transport: { active: false, cost: '' }
-      }
+      commute: entry.commute || defaultCommute || DEFAULT_COMMUTE
     };
     // Restore receipt if exists
     const relatedMileage = mileageEntries.filter(m => m.relatedTripId === entry.id);
@@ -548,12 +543,7 @@ export const useTripForm = () => {
       startTime: '',
       endTime: '',
       employerExpenses: 0,
-      commute: defaultCommute || {
-        car: { active: true, distance: 0 },
-        motorcycle: { active: false, distance: 0 },
-        bike: { active: false, distance: 0 },
-        public_transport: { active: false, cost: '' }
-      }
+      commute: defaultCommute || DEFAULT_COMMUTE
     });
   };
 
