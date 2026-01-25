@@ -221,7 +221,7 @@ export function LoadingButton({
           <Spinner size="sm" />
         </span>
       )}
-      <span className={isLoading ? 'invisible' : ''}>
+      <span className={`flex items-center justify-center gap-2 ${isLoading ? 'invisible' : ''}`}>
         {children}
       </span>
     </button>
