@@ -136,6 +136,12 @@ export const useEquipmentList = () => {
 
   const filteredEquipmentEntries = useMemo(() => {
     return equipmentEntries
+      .filter(entry => {
+        // Calculate deductible for the selected year
+        const deductible = calculateDeductible(entry, selectedYear);
+        // Only include entries with deduction in selected year
+        return deductible > 0;
+      })
       .map(entry => {
         const purchaseDate = new Date(entry.date);
         const purchaseYear = purchaseDate.getFullYear();
@@ -143,11 +149,6 @@ export const useEquipmentList = () => {
         
         // Calculate deductible for the selected year
         const deductible = calculateDeductible(entry, selectedYear);
-        
-        // Skip entries with no deduction in the selected year
-        if (deductible === 0) {
-          return null;
-        }
         
         // For GWG items, show full amount
         if (price <= (taxRates?.gwgLimit || 952)) {
@@ -178,7 +179,6 @@ export const useEquipmentList = () => {
           status: `Abschreibung ${selectedYear} (${monthsInYear} Mon.)`
         };
       })
-      .filter(entry => entry !== null)
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [equipmentEntries, taxRates, selectedYear]);
 

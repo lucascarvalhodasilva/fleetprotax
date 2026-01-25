@@ -78,10 +78,15 @@ export default function Header() {
     return parseFloat((monthlyDepreciation * monthsInYear).toFixed(2));
   };
 
-  const filteredEquipmentEntries = equipmentEntries.filter(entry => {
-    const deductible = calculateEquipmentDeductible(entry, selectedYear, taxRates);
-    return deductible > 0;
-  });
+  // Calculate equipment entries with deductibles for selected year
+  const equipmentWithDeductibles = equipmentEntries.map(entry => ({
+    entry,
+    deductible: calculateEquipmentDeductible(entry, selectedYear, taxRates)
+  }));
+
+  const filteredEquipmentEntries = equipmentWithDeductibles
+    .filter(item => item.deductible > 0)
+    .map(item => item.entry);
 
   // Calculate totals
   const tripTotal = filteredTripEntries.reduce((sum, entry) => {
@@ -103,10 +108,9 @@ export default function Header() {
   }, 0);
 
   const expenseTotal = filteredExpenseEntries.reduce((sum, entry) => sum + (entry.amount || 0), 0);
-  const equipmentTotal = filteredEquipmentEntries.reduce((sum, entry) => {
-    const deductible = calculateEquipmentDeductible(entry, selectedYear, taxRates);
-    return sum + deductible;
-  }, 0);
+  const equipmentTotal = equipmentWithDeductibles
+    .filter(item => item.deductible > 0)
+    .reduce((sum, item) => sum + item.deductible, 0);
 
   const getPageConfig = () => {
     if (pathname === '/') return { 
