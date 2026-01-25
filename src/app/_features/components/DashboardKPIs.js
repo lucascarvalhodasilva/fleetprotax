@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import SpesenSideNav from './SpesenSideNav';
+import TaxDeductibleChart from './TaxDeductibleChart';
 
 /**
  * @typedef {'default' | 'negative' | 'clickable'} KPIVariant
@@ -121,6 +122,9 @@ export default function DashboardKPIs({
             <span className="text-2xl font-medium ml-1 opacity-80">€</span>
           </div>
           <p className="text-xs text-white/60">Steuerlich absetzbare Summe</p>
+          
+          {/* Monthly Tax Deductible Chart */}
+          <TaxDeductibleChart year={selectedYear} />
         </div>
 
         {/* KPI Grid */}
