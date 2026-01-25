@@ -106,6 +106,7 @@ export const useTripForm = () => {
   }, [defaultCommute]);
 
   const [submitError, setSubmitError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const takePublicTransportPicture = async (source) => {
     try {
@@ -256,37 +257,42 @@ export const useTripForm = () => {
   const handleSubmit = async (e, onSuccess) => {
     e.preventDefault();
     setSubmitError(null);
+    setIsSubmitting(true);
 
-    // Validation: Date and Time
-    const startDate = formData.date;
-    const endDate = formData.endDate || formData.date;
+    try {
+      // Validation: Date and Time
+      const startDate = formData.date;
+      const endDate = formData.endDate || formData.date;
 
-    if (!startDate || !formData.startTime || !formData.endTime) {
-      setSubmitError("Bitte Start- und Endzeitraum vollständig und gültig angeben.");
-      return;
-    }
+      if (!startDate || !formData.startTime || !formData.endTime) {
+        setSubmitError("Bitte Start- und Endzeitraum vollständig und gültig angeben.");
+        setIsSubmitting(false);
+        return;
+      }
 
-    if (endDate < startDate) {
-      setSubmitError("Bitte Start- und Endzeitraum vollständig und gültig angeben.");
-      return;
-    }
+      if (endDate < startDate) {
+        setSubmitError("Bitte Start- und Endzeitraum vollständig und gültig angeben.");
+        setIsSubmitting(false);
+        return;
+      }
 
-    if (startDate === endDate && formData.endTime <= formData.startTime) {
-      setSubmitError("Die Endzeit muss nach der Startzeit liegen.");
-      return;
-    }
+      if (startDate === endDate && formData.endTime <= formData.startTime) {
+        setSubmitError("Die Endzeit muss nach der Startzeit liegen.");
+        setIsSubmitting(false);
+        return;
+      }
 
-    // Validation: Minimum 8 hours duration for allowance eligibility
-    const tripStart = new Date(`${startDate}T${formData.startTime}`);
-    let tripEndDate = endDate;
-    // If end time is before start time on same day, assume next day
-    if (startDate === endDate && formData.endTime <= formData.startTime) {
-      const nextDay = new Date(startDate);
-      nextDay.setDate(nextDay.getDate() + 1);
-      tripEndDate = nextDay.toISOString().split('T')[0];
-    }
-    const tripEnd = new Date(`${tripEndDate}T${formData.endTime}`);
-    const durationInHours = (tripEnd - tripStart) / (1000 * 60 * 60);
+      // Validation: Minimum 8 hours duration for allowance eligibility
+      const tripStart = new Date(`${startDate}T${formData.startTime}`);
+      let tripEndDate = endDate;
+      // If end time is before start time on same day, assume next day
+      if (startDate === endDate && formData.endTime <= formData.startTime) {
+        const nextDay = new Date(startDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        tripEndDate = nextDay.toISOString().split('T')[0];
+      }
+      const tripEnd = new Date(`${tripEndDate}T${formData.endTime}`);
+      const durationInHours = (tripEnd - tripStart) / (1000 * 60 * 60);
     
     if (durationInHours < 8) {
       setSubmitError("Die Reisedauer muss mindestens 8 Stunden betragen, um eine Pauschale zu erhalten.");
@@ -432,9 +438,15 @@ export const useTripForm = () => {
     setTempPublicTransportReceipt(null);
     setTempPublicTransportReceiptPath(null);
     setEditingId(null);
+    setIsSubmitting(false);
 
     if (onSuccess) onSuccess(tripId);
-  };
+  } catch (error) {
+    console.error('Error submitting trip:', error);
+    setSubmitError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
+    setIsSubmitting(false);
+  }
+};
 
   const startEdit = async (entry) => {
     const editData = {
@@ -540,6 +552,7 @@ export const useTripForm = () => {
     autoAddStationTrips, 
     setAutoAddStationTrips,
     submitError,
+    isSubmitting,
     tempPublicTransportReceipt,
     tempPublicTransportReceiptType,
     takePublicTransportPicture,

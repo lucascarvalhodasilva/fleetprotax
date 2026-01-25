@@ -19,6 +19,7 @@ export default function TripsPage() {
     autoAddStationTrips, 
     setAutoAddStationTrips,
     submitError,
+    isSubmitting,
     tempPublicTransportReceipt,
     tempPublicTransportReceiptType,
     takePublicTransportPicture,
@@ -109,6 +110,7 @@ export default function TripsPage() {
                 setFormData={setFormData}
                 handleSubmit={handleFormSubmit}
                 submitError={submitError}
+                isSubmitting={isSubmitting}
                 editingId={editingId}
                 cancelEdit={handleModalClose}
                 hasChanges={hasChanges}

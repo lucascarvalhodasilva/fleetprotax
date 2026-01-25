@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 
 export const useDashboard = () => {
   const { tripEntries, mileageEntries, equipmentEntries, expenseEntries, monthlyEmployerExpenses, selectedYear, taxRates } = useAppContext();
+  const [isLoading, setIsLoading] = useState(true);
 
   // Filter entries by selected year
   const filteredTrips = useMemo(() => 
@@ -86,6 +87,16 @@ export const useDashboard = () => {
   .sort((a, b) => new Date(b.date) - new Date(a.date))
   .slice(0, 5), [tripEntries, mileageEntries, equipmentEntries]);
 
+  // Simulate initial data loading (in real app, this would wait for data fetch)
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 300); // Short delay to show skeleton on initial load
+    
+    return () => clearTimeout(timer);
+  }, [selectedYear]); // Re-trigger when year changes
+
   return {
     selectedYear,
     grandTotal,
@@ -95,6 +106,7 @@ export const useDashboard = () => {
     totalEmployerReimbursement,
     totalExpenses,
     netTotal,
-    recentActivities
+    recentActivities,
+    isLoading
   };
 };
