@@ -313,8 +313,14 @@ export const useExpenses = () => {
 
     let loadedReceipt = null;
     let loadedPath = null;
+    let loadedReceiptType = 'image';
 
     if (entry.receiptFileName) {
+      // Determine file type from filename
+      const isPdf = entry.receiptFileName.toLowerCase().endsWith('.pdf');
+      loadedReceiptType = isPdf ? 'pdf' : 'image';
+      const extension = isPdf ? 'pdf' : 'jpg';
+
       try {
         // Try reading from Documents/receipts/
         let fileData;
@@ -338,8 +344,8 @@ export const useExpenses = () => {
         }
 
         if (fileData) {
-          // Write to temp cache
-          const tempFileName = `restored_expense_${Date.now()}.jpg`;
+          // Write to temp cache with correct extension
+          const tempFileName = `restored_expense_${Date.now()}.${extension}`;
           const tempPath = `temp/expenses/${tempFileName}`;
           
           await Filesystem.writeFile({
@@ -361,6 +367,7 @@ export const useExpenses = () => {
     setInitialEditData(editData);
     setTempExpenseReceipt(loadedReceipt);
     setTempExpenseReceiptPath(loadedPath);
+    setTempExpenseReceiptType(loadedReceiptType);
     setInitialReceiptPath(loadedPath);
     setEditingId(entry.id);
   };
