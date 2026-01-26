@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Filesystem, Directory } from '@capacitor/filesystem';
+import { getMimeType, getFileType } from '@/utils/fileHelpers';
 
 export const useEquipmentList = () => {
   const { equipmentEntries, deleteEquipmentEntry, selectedYear, taxRates } = useAppContext();
@@ -13,7 +14,12 @@ export const useEquipmentList = () => {
         path: `receipts/${fileName}`,
         directory: Directory.Documents
       });
-      return `data:image/jpeg;base64,${file.data}`;
+      
+      const mimeType = getMimeType(fileName);
+      return {
+        data: `data:${mimeType};base64,${file.data}`,
+        type: getFileType(fileName)
+      };
     } catch (e) {
       console.error('Error loading receipt:', e);
       return null;
@@ -21,9 +27,9 @@ export const useEquipmentList = () => {
   };
 
   const handleViewReceipt = async (fileName) => {
-    const base64 = await loadReceipt(fileName);
-    if (base64) {
-      setViewingReceipt(base64);
+    const receipt = await loadReceipt(fileName);
+    if (receipt) {
+      setViewingReceipt(receipt);
     } else {
       alert('Beleg konnte nicht geladen werden.');
     }

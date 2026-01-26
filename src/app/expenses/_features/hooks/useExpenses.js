@@ -3,6 +3,7 @@ import { useAppContext } from '@/context/AppContext';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { validateFile } from '@/utils/fileValidation';
+import { getMimeType, getFileType } from '@/utils/fileHelpers';
 
 export const useExpenses = () => {
   const { expenseEntries, addExpenseEntry, deleteExpenseEntry, selectedYear } = useAppContext();
@@ -189,7 +190,12 @@ export const useExpenses = () => {
         path: `receipts/${fileName}`,
         directory: Directory.Documents
       });
-      return file.data;
+      
+      const mimeType = getMimeType(fileName);
+      return {
+        data: `data:${mimeType};base64,${file.data}`,
+        type: getFileType(fileName)
+      };
     } catch (e) {
       console.error('Error loading receipt:', e);
       return null;
@@ -198,9 +204,9 @@ export const useExpenses = () => {
 
   const handleViewReceipt = async (entry) => {
     if (entry.receiptFileName) {
-      const base64Data = await loadReceipt(entry.receiptFileName);
-      if (base64Data) {
-        setViewingReceipt(base64Data);
+      const receipt = await loadReceipt(entry.receiptFileName);
+      if (receipt) {
+        setViewingReceipt(receipt);
       }
     }
   };
