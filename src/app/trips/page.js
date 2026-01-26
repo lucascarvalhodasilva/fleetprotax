@@ -5,7 +5,7 @@ import { useTripList } from './_features/hooks/useTripList';
 import TripForm from './_features/components/TripForm';
 import TripList from './_features/components/TripList';
 import FullScreenTableView from './_features/components/FullScreenTableView';
-import PDFViewer from '@/components/shared/PDFViewer';
+import PDFViewer from '@/components/shared/PDFViewerDynamic';
 
 export default function TripsPage() {
   const [isFullScreen, setIsFullScreen] = useState(false);

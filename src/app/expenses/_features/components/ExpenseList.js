@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { formatDate } from '@/utils/dateFormatter';
 import ConfirmationModal from '@/components/shared/ConfirmationModal';
-import PDFViewer from '@/components/shared/PDFViewer';
+import PDFViewer from '@/components/shared/PDFViewerDynamic';
 
 export default function ExpenseList({ 
   filteredEntries, 

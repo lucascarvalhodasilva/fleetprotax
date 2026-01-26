@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { CameraSource } from '@capacitor/camera';
+import dynamic from 'next/dynamic';
 
-const PDFViewerComponent = lazy(() => import('./PDFViewer'));
+const PDFViewerComponent = dynamic(() => import('./PDFViewer'), { ssr: false });
 
 // Convert base64 to Uint8Array for react-pdf
 const base64ToUint8Array = (base64) => {

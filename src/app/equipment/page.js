@@ -4,7 +4,7 @@ import { useEquipmentForm } from './_features/hooks/useEquipmentForm';
 import { useEquipmentList } from './_features/hooks/useEquipmentList';
 import EquipmentForm from './_features/components/EquipmentForm';
 import EquipmentList from './_features/components/EquipmentList';
-import PDFViewer from '@/components/shared/PDFViewer';
+import PDFViewer from '@/components/shared/PDFViewerDynamic';
 import { formatDate } from '@/utils/dateFormatter';
 
 export default function EquipmentPage() {
