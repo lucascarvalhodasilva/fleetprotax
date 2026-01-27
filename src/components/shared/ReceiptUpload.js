@@ -53,37 +53,50 @@ export default function ReceiptUpload({
 
   // Lock body scroll when viewer is open
   useEffect(() => {
+    if (showViewer) {
+      console.log('[ReceiptUpload] Viewer opened:', { 
+        receiptType, 
+        hasReceipt: !!receipt,
+        hasPdfData: !!pdfData,
+        pdfDataLength: pdfData?.length,
+        pdfError
+      });
+    }
     document.body.style.overflow = showViewer ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [showViewer]);
+  }, [showViewer, receiptType, receipt, pdfData, pdfError]);
 
-  // Convert PDF for react-pdf - do this whenever receipt changes
+  // Convert PDF for react-pdf - do this whenever receipt changes OR viewer opens
   useEffect(() => {
-    if (receiptType === 'pdf' && receipt) {
+    if (receiptType === 'pdf' && receipt && showViewer) {
+      console.log('[ReceiptUpload] PDF receipt detected, converting...', { receiptLength: receipt?.length });
       setPdfError(false);
       setPdfData(null); // Reset first
       
-      // Small delay to ensure state is ready
-      const timer = setTimeout(() => {
-        try {
-          const converted = base64ToUint8Array(receipt);
-          if (converted && converted.length > 0) {
-            setPdfData(converted);
-          } else {
-            console.error('PDF conversion returned empty or null');
-            setPdfError(true);
-          }
-        } catch (e) {
-          console.error('PDF conversion error:', e);
+      // Convert immediately without delay when viewer is open
+      try {
+        const converted = base64ToUint8Array(receipt);
+        console.log('[ReceiptUpload] PDF conversion result:', { 
+          success: !!converted, 
+          length: converted?.length,
+          firstBytes: converted ? Array.from(converted.slice(0, 10)) : null
+        });
+        if (converted && converted.length > 0) {
+          setPdfData(converted);
+        } else {
+          console.error('[ReceiptUpload] PDF conversion returned empty or null');
           setPdfError(true);
         }
-      }, 50);
-      return () => clearTimeout(timer);
-    } else {
+      } catch (e) {
+        console.error('[ReceiptUpload] PDF conversion error:', e);
+        setPdfError(true);
+      }
+    } else if (!showViewer) {
+      // Reset when viewer closes
       setPdfData(null);
       setPdfError(false);
     }
-  }, [receiptType, receipt]);
+  }, [receiptType, receipt, showViewer]);
 
   // Color themes
   const themes = {
