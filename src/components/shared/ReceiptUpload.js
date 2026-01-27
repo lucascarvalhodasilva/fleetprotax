@@ -115,8 +115,9 @@ export default function ReceiptUpload({
             <p className="text-[10px] text-muted-foreground">Beleg hochgeladen</p>
           </div>
           <div className="flex gap-1.5">
-            <ActionButton icon={<RefreshIcon />} colors={colors} onClick={() => onPickFile?.()} />
-            <ActionButton icon={<TrashIcon />} danger onClick={onRemove} />
+            <ActionButton icon={<EyeIcon className="w-4 h-4" />} colors={colors} onClick={() => setShowViewer(true)} title="Vorschau" />
+            <ActionButton icon={<RefreshIcon />} colors={colors} onClick={() => onPickFile?.()} title="Ersetzen" />
+            <ActionButton icon={<TrashIcon />} danger onClick={onRemove} title="Löschen" />
           </div>
         </div>
       )}
@@ -176,8 +177,8 @@ const Thumbnail = ({ receipt, receiptType, colors, onClick }) => (
   </button>
 );
 
-const ActionButton = ({ icon, colors, danger, onClick }) => (
-  <button type="button" onClick={onClick} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-95 ${danger ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500' : `${colors?.btn} ${colors?.icon}`}`}>
+const ActionButton = ({ icon, colors, danger, onClick, title }) => (
+  <button type="button" onClick={onClick} title={title} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-95 ${danger ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500' : `${colors?.btn} ${colors?.icon}`}`}>
     {icon}
   </button>
 );
