@@ -3,9 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { CameraSource } from '@capacitor/camera';
-import dynamic from 'next/dynamic';
-
-const PDFViewerComponent = dynamic(() => import('./PDFViewer'), { ssr: false });
+import PDFViewerComponent from './PDFViewerDynamic';
 
 // Convert base64 to Uint8Array for react-pdf
 const base64ToUint8Array = (base64) => {
@@ -128,7 +126,10 @@ export default function ReceiptUpload({
             <p className="text-[10px] text-muted-foreground">Beleg hochgeladen</p>
           </div>
           <div className="flex gap-1.5">
-            <ActionButton icon={<EyeIcon className="w-4 h-4" />} colors={colors} onClick={() => setShowViewer(true)} title="Vorschau" />
+            <ActionButton icon={<EyeIcon className="w-4 h-4" />} colors={colors} onClick={() => {
+              console.log('[ReceiptUpload] Preview button clicked!', { receiptType, hasReceipt: !!receipt });
+              setShowViewer(true);
+            }} title="Vorschau" />
             <ActionButton icon={<RefreshIcon />} colors={colors} onClick={() => onPickFile?.()} title="Ersetzen" />
             <ActionButton icon={<TrashIcon />} danger onClick={onRemove} title="Löschen" />
           </div>
@@ -136,27 +137,36 @@ export default function ReceiptUpload({
       )}
 
       {/* Fullscreen Viewer */}
-      {showViewer && receipt && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 99999 }} onClick={() => setShowViewer(false)}>
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-          {receiptType === 'pdf' ? (
-            <Suspense fallback={<Spinner />}>
-              {pdfError ? (
-                <ErrorState onClose={() => setShowViewer(false)} />
-              ) : pdfData ? (
-                <div className="relative w-[92vw] h-[92vh]" onClick={(e) => e.stopPropagation()}>
-                  <PDFViewerComponent source={{ data: pdfData }} onClose={() => setShowViewer(false)} onError={() => setPdfError(true)} />
-                </div>
-              ) : (
-                <LoadingState onCancel={() => setShowViewer(false)} />
-              )}
-            </Suspense>
-          ) : (
-            <ImageViewer src={`data:image/jpeg;base64,${receipt}`} onClose={() => setShowViewer(false)} />
-          )}
-        </div>,
-        document.body
-      )}
+      {showViewer && receipt && typeof document !== 'undefined' && (() => {
+        console.log('[ReceiptUpload] Rendering portal viewer:', { 
+          showViewer, 
+          hasReceipt: !!receipt, 
+          receiptType,
+          pdfData: !!pdfData,
+          pdfError
+        });
+        return createPortal(
+          <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 99999 }} onClick={() => setShowViewer(false)}>
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+            {receiptType === 'pdf' ? (
+              <Suspense fallback={<Spinner />}>
+                {pdfError ? (
+                  <ErrorState onClose={() => setShowViewer(false)} />
+                ) : pdfData ? (
+                  <div className="relative w-[92vw] h-[92vh]" onClick={(e) => e.stopPropagation()}>
+                    <PDFViewerComponent source={{ data: pdfData }} onClose={() => setShowViewer(false)} onError={() => setPdfError(true)} />
+                  </div>
+                ) : (
+                  <LoadingState onCancel={() => setShowViewer(false)} />
+                )}
+              </Suspense>
+            ) : (
+              <ImageViewer src={`data:image/jpeg;base64,${receipt}`} onClose={() => setShowViewer(false)} />
+            )}
+          </div>,
+          document.body
+        );
+      })()}
     </div>
   );
 }
