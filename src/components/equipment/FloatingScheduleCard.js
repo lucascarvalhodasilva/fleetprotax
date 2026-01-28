@@ -7,8 +7,7 @@ export default function FloatingScheduleCard({
   open, 
   onClose, 
   schedule,
-  selectedYear,
-  onViewReceipt 
+  selectedYear 
 }) {
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -124,7 +123,7 @@ export default function FloatingScheduleCard({
         {/* Drag Handle - Enhanced */}
         <div className="flex items-center justify-center mb-3">
           <div 
-            className="w-12 h-1.5 bg-muted-foreground/40 rounded-full cursor-grab active:cursor-grabbing active:bg-muted-foreground/60"
+            className="w-12 h-[5px] bg-muted-foreground/40 rounded-full cursor-grab active:cursor-grabbing active:bg-muted-foreground/60"
             aria-label="Zum Schließen nach unten wischen"
             role="button"
             tabIndex={0}
@@ -134,8 +133,8 @@ export default function FloatingScheduleCard({
         {/* Non-scrollable Content */}
         <div>
         {/* Compact Header */}
-        <div className="mb-3">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
               <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -146,22 +145,14 @@ export default function FloatingScheduleCard({
             </h3>
           </div>
           
-          {/* Compact Details as Chips */}
-          <div className="flex flex-wrap gap-1.5">
-            <span className="text-xs px-2.5 py-1 rounded-md bg-white/60 dark:bg-white/5 border border-border/30 text-foreground font-medium">
-              {parseFloat(currentEquipment.price || 0).toFixed(2)} €
-            </span>
-            <span className="text-xs px-2.5 py-1 rounded-md bg-white/60 dark:bg-white/5 border border-border/30 text-foreground font-medium">
-              {depreciationYears} {depreciationYears === 1 ? 'Jahr' : 'Jahre'}
-            </span>
-            <span className={`text-xs px-2.5 py-1 rounded-md border font-medium ${
-              isGWG 
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' 
-                : 'bg-white/60 dark:bg-white/5 border-border/30 text-foreground'
-            }`}>
-              {isGWG ? 'GWG ✅' : 'Mehrjährig'}
-            </span>
-          </div>
+          {/* Status Chip */}
+          <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+            isGWG 
+              ? 'bg-emerald-500/10 text-emerald-600' 
+              : 'bg-amber-500/10 text-amber-600'
+          }`}>
+            {currentEquipment.status || (isGWG ? 'GWG' : 'AfA')}
+          </span>
         </div>
 
         {/* Depreciation Schedule */}
@@ -173,7 +164,7 @@ export default function FloatingScheduleCard({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="text-xs font-semibold text-foreground">📅 Abschreibungsplan</span>
+              <span className="text-xs font-semibold text-foreground">Abschreibungsplan</span>
             </div>
             
             <div>
@@ -213,6 +204,7 @@ export default function FloatingScheduleCard({
             </div>
           </div>
         )}
+
         </div>
       </div>
     </>
