@@ -99,9 +99,23 @@ export default function EquipmentList({
         itemId={entry.id}
         className="rounded-2xl bg-card/80 backdrop-blur-sm border border-border/30"
         hasReceipt={!!entry.receiptFileName}
-        onEdit={() => onEdit && onEdit(entry)}
+        onEdit={() => {
+          // Auto-close schedule card when opening edit form (issue #56)
+          if (scheduleOpen) {
+            setScheduleOpen(false);
+            setTimeout(() => setSelectedEquipment(null), 300);
+          }
+          onEdit && onEdit(entry);
+        }}
         onDelete={() => setDeleteConfirmation({ isOpen: true, entry })}
-        onViewReceipt={() => handleViewReceipt(entry.receiptFileName)}
+        onViewReceipt={() => {
+          // Auto-close schedule card when opening receipt viewer (issue #56)
+          if (scheduleOpen) {
+            setScheduleOpen(false);
+            setTimeout(() => setSelectedEquipment(null), 300);
+          }
+          handleViewReceipt(entry.receiptFileName);
+        }}
         onSchedule={() => {
           if (scheduleOpen && selectedEquipment?.id !== entry.id) {
             // Switch equipment - card will transition automatically
