@@ -88,6 +88,20 @@ export default function EquipmentList({
         onEdit={() => onEdit && onEdit(entry)}
         onDelete={() => setDeleteConfirmation({ isOpen: true, entry })}
         onViewReceipt={() => handleViewReceipt(entry.receiptFileName)}
+        onSchedule={() => {
+          if (scheduleOpen && selectedEquipment?.id !== entry.id) {
+            // Switch equipment - card will transition automatically
+            setSelectedEquipment(entry);
+          } else if (scheduleOpen && selectedEquipment?.id === entry.id) {
+            // Same equipment clicked - close
+            setScheduleOpen(false);
+            setTimeout(() => setSelectedEquipment(null), 300);
+          } else {
+            // Open fresh
+            setSelectedEquipment(entry);
+            setScheduleOpen(true);
+          }
+        }}
       >
         <div id={`equipment-row-${entry.id}`} className="p-4 rounded-2xl">
           <div className="flex items-center gap-4">
@@ -120,44 +134,13 @@ export default function EquipmentList({
             </div>
 
             {/* Amount */}
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="text-right">
-                <span className="text-base font-bold text-blue-600 block">
-                  +{(entry.deductibleAmount || 0).toFixed(2)} €
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {(entry.price || 0).toFixed(0)}€ Preis
-                </span>
-              </div>
-              
-              {/* Toggle Schedule Button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (scheduleOpen && selectedEquipment?.id !== entry.id) {
-                    // Switch equipment - card will transition automatically
-                    setSelectedEquipment(entry);
-                  } else if (scheduleOpen && selectedEquipment?.id === entry.id) {
-                    // Same equipment clicked - close
-                    setScheduleOpen(false);
-                    setTimeout(() => setSelectedEquipment(null), 300);
-                  } else {
-                    // Open fresh
-                    setSelectedEquipment(entry);
-                    setScheduleOpen(true);
-                  }
-                }}
-                className={`w-8 h-8 rounded-lg transition-colors flex items-center justify-center ${
-                  selectedEquipment?.id === entry.id && scheduleOpen
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20'
-                }`}
-                aria-label="Abschreibungsplan anzeigen"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </button>
+            <div className="text-right shrink-0">
+              <span className="text-base font-bold text-blue-600 block">
+                +{(entry.deductibleAmount || 0).toFixed(2)} €
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {(entry.price || 0).toFixed(0)}€ Preis
+              </span>
             </div>
           </div>
         </div>
