@@ -8,6 +8,7 @@ import React, { useState, useRef, useEffect } from 'react';
  * @param {Function} props.onEdit - Callback when edit button is clicked
  * @param {Function} props.onDelete - Callback when delete button is clicked
  * @param {Function} props.onViewReceipt - Callback when receipt button is clicked
+ * @param {Function} props.onSchedule - Callback when schedule button is clicked (optional)
  * @param {boolean} props.hasReceipt - Whether the item has a receipt
  * @param {string} props.itemId - Unique identifier for the item
  * @param {string} props.className - Additional CSS classes for the container
@@ -17,6 +18,7 @@ export default function SwipeableListItem({
   onEdit,
   onDelete,
   onViewReceipt,
+  onSchedule,
   hasReceipt = false,
   itemId,
   className = ''
@@ -24,7 +26,9 @@ export default function SwipeableListItem({
   const [swipeDirection, setSwipeDirection] = useState(null); // 'left', 'right', or null
   const swipeState = useRef({ id: null, startX: 0, translateX: 0, dragging: false });
 
-  const actionsWidth = 100; // Width for edit/delete actions (2 buttons)
+  // Calculate actions width based on number of buttons
+  const numActionButtons = 2 + (onSchedule ? 1 : 0); // edit + delete + optional schedule
+  const actionsWidth = numActionButtons * 48 + (numActionButtons - 1) * 8; // 48px per button + 8px gap
   const receiptWidth = 56; // Width for receipt button (1 button, proportional)
 
   const handlePointerDown = (e) => {
@@ -101,6 +105,7 @@ export default function SwipeableListItem({
     if (action === 'edit' && onEdit) onEdit();
     if (action === 'delete' && onDelete) onDelete();
     if (action === 'receipt' && onViewReceipt) onViewReceipt();
+    if (action === 'schedule' && onSchedule) onSchedule();
   };
 
   useEffect(() => {
@@ -158,6 +163,17 @@ export default function SwipeableListItem({
         }`}
         style={{ width: `${actionsWidth}px` }}
       >
+        {onSchedule && (
+          <button
+            onClick={(e) => handleActionClick('schedule', e)}
+            className="w-10 h-10 bg-primary/80 hover:bg-primary/90 text-white transition-all flex items-center justify-center active:scale-95 rounded-xl"
+            aria-label="Abschreibungsplan"
+          >
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </button>
+        )}
         <button
           onClick={(e) => handleActionClick('edit', e)}
           className="w-10 h-10 bg-primary/80 hover:bg-primary/90 text-white transition-all flex items-center justify-center active:scale-95 rounded-xl"
