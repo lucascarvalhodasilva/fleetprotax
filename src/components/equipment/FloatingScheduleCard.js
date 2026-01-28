@@ -124,7 +124,7 @@ export default function FloatingScheduleCard({
         {/* Drag Handle - Enhanced */}
         <div className="flex items-center justify-center mb-3">
           <div 
-            className="w-12 h-1.5 bg-muted-foreground/40 rounded-full cursor-grab active:cursor-grabbing active:bg-muted-foreground/60"
+            className="w-12 h-[5px] bg-muted-foreground/40 rounded-full cursor-grab active:cursor-grabbing active:bg-muted-foreground/60"
             aria-label="Zum Schließen nach unten wischen"
             role="button"
             tabIndex={0}
@@ -212,6 +212,36 @@ export default function FloatingScheduleCard({
               </div>
             </div>
           </div>
+        )}
+
+        {/* GWG Info (for items under GWG limit) */}
+        {isGWG && (
+          <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+            <div className="flex items-start gap-2">
+              <svg className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <div className="text-xs font-semibold text-emerald-600 mb-0.5">Geringwertiges Wirtschaftsgut</div>
+                <div className="text-xs text-emerald-600/80">
+                  Sofortabschreibung im Jahr {currentEquipment.purchaseYear || new Date(currentEquipment.date).getFullYear()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Receipt Button */}
+        {currentEquipment.receiptFileName && onViewReceipt && (
+          <button
+            onClick={() => onViewReceipt(currentEquipment.receiptFileName)}
+            className="mt-3 w-full h-12 rounded-xl bg-white/60 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border border-border/30 text-foreground font-medium transition-all flex items-center justify-center gap-2 text-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Beleg anzeigen
+          </button>
         )}
         </div>
       </div>
