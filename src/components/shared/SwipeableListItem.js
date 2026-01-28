@@ -25,12 +25,18 @@ export default function SwipeableListItem({
 }) {
   const [swipeDirection, setSwipeDirection] = useState(null); // 'left', 'right', or null
   const swipeState = useRef({ id: null, startX: 0, translateX: 0, dragging: false });
-
+  
   // Calculate actions width based on number of buttons
   const numRightActions = 2; // edit + delete
   const numLeftActions = (hasReceipt ? 1 : 0) + (onSchedule ? 1 : 0); // receipt + optional schedule
-  const actionsWidth = numRightActions * 48 + (numRightActions - 1) * 8; // 48px per button + 8px gap
-  const leftActionsWidth = numLeftActions * 48 + (numLeftActions - 1) * 8; // Left side actions width
+  const actionsWidth = numRightActions * 48 + Math.max(0, numRightActions - 1) * 8; // 48px per button + 8px gap
+  const leftActionsWidth = numLeftActions * 48 + Math.max(0, numLeftActions - 1) * 8; // Left side actions width
+  
+  // Store widths in ref for event handlers
+  const widthsRef = useRef({ actionsWidth, leftActionsWidth, hasReceipt, onSchedule });
+  useEffect(() => {
+    widthsRef.current = { actionsWidth, leftActionsWidth, hasReceipt, onSchedule };
+  }, [actionsWidth, leftActionsWidth, hasReceipt, onSchedule]);
 
   const handlePointerDown = (e) => {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -43,17 +49,19 @@ export default function SwipeableListItem({
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     let delta = clientX - swipeState.current.startX;
     
+    const { actionsWidth: currentActionsWidth, leftActionsWidth: currentLeftActionsWidth, hasReceipt: currentHasReceipt, onSchedule: currentOnSchedule } = widthsRef.current;
+    
     // Limit swipe range
     if (delta < 0) {
       // Swipe left - show actions
-      const maxSwipe = -actionsWidth;
+      const maxSwipe = -currentActionsWidth;
       if (delta < maxSwipe) delta = maxSwipe;
     } else {
       // Swipe right - show receipt/schedule (only if has receipt or schedule)
-      if (!hasReceipt && !onSchedule) {
+      if (!currentHasReceipt && !currentOnSchedule) {
         delta = 0;
       } else {
-        const maxSwipe = leftActionsWidth;
+        const maxSwipe = currentLeftActionsWidth;
         if (delta > maxSwipe) delta = maxSwipe;
       }
     }
@@ -71,11 +79,13 @@ export default function SwipeableListItem({
     const delta = swipeState.current.translateX;
     let newDirection = null;
     
+    const { actionsWidth: currentActionsWidth, leftActionsWidth: currentLeftActionsWidth, hasReceipt: currentHasReceipt, onSchedule: currentOnSchedule } = widthsRef.current;
+    
     // Determine if swipe threshold was met (50px)
     if (delta < -50) {
       // Swipe left - show actions
       newDirection = 'left';
-    } else if (delta > 50 && (hasReceipt || onSchedule)) {
+    } else if (delta > 50 && (currentHasReceipt || currentOnSchedule)) {
       // Swipe right - show receipt/schedule
       newDirection = 'right';
     }
@@ -85,7 +95,7 @@ export default function SwipeableListItem({
     // Animate to final position
     const el = document.getElementById(`swipe-inner-${itemId}`);
     if (el) {
-      const targetX = newDirection === 'left' ? -actionsWidth : newDirection === 'right' ? leftActionsWidth : 0;
+      const targetX = newDirection === 'left' ? -currentActionsWidth : newDirection === 'right' ? currentLeftActionsWidth : 0;
       el.style.transform = `translateX(${targetX}px)`;
     }
     
