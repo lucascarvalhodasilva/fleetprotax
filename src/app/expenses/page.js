@@ -85,7 +85,9 @@ export default function ExpensesPage() {
       pushModal(modalId, handleModalClose);
       return () => removeModal(modalId);
     }
-  }, [showExpenseModal, handleModalClose, pushModal, removeModal, generateModalId]);
+    // generateModalId is stable but shouldn't be in deps as it generates new values
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showExpenseModal, handleModalClose, pushModal, removeModal]);
 
   useEffect(() => {
     if (isFullScreen) {

@@ -89,7 +89,9 @@ export default function TripsPage() {
       pushModal(modalId, handleModalClose);
       return () => removeModal(modalId);
     }
-  }, [showTripModal, handleModalClose, pushModal, removeModal, generateModalId]);
+    // generateModalId is stable but shouldn't be in deps as it generates new values
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTripModal, handleModalClose, pushModal, removeModal]);
 
   return (
     <div className="bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 h-full overflow-hidden">
