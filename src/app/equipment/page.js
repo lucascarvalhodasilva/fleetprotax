@@ -11,6 +11,8 @@ import { useUIContext } from '@/context/UIContext';
 export default function EquipmentPage() {
   const [highlightId, setHighlightId] = useState(null);
   const [showEquipmentModal, setShowEquipmentModal] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
   const { pushModal, removeModal, generateModalId } = useUIContext();
 
   const {
@@ -68,6 +70,35 @@ export default function EquipmentPage() {
     generateDepreciationSchedule
   } = useEquipmentList();
 
+  // Auto-close schedule card when opening form or receipt preview
+  useEffect(() => {
+    let timeoutId;
+    if (showEquipmentModal || viewingReceipt) {
+      if (scheduleOpen) {
+        setScheduleOpen(false);
+        timeoutId = setTimeout(() => setSelectedEquipment(null), 300);
+      }
+    }
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [showEquipmentModal, viewingReceipt, scheduleOpen]); // Only respond to modal/receipt state changes
+
+  // Helper to close floating card first, then execute action
+  const closeFloatingCardThen = (action) => {
+    if (scheduleOpen) {
+      setScheduleOpen(false);
+      setTimeout(() => {
+        setSelectedEquipment(null);
+        action();
+      }, 300);
+    } else {
+      action();
+    }
+  };
+
   // Register modals with UIContext
   useEffect(() => {
     if (viewingReceipt) {
@@ -108,14 +139,20 @@ export default function EquipmentPage() {
             deleteEquipmentEntry={deleteEquipmentEntry}
             selectedYear={selectedYear}
             setIsFullScreen={setIsFullScreen}
-            handleViewReceipt={handleViewReceipt}
+            handleViewReceipt={(fileName) => closeFloatingCardThen(() => handleViewReceipt(fileName))}
             highlightId={highlightId}
             onEdit={async (entry) => {
-              await startEdit(entry);
-              setShowEquipmentModal(true);
+              closeFloatingCardThen(async () => {
+                await startEdit(entry);
+                setShowEquipmentModal(true);
+              });
             }}
-            onAddEquipment={() => setShowEquipmentModal(true)}
+            onAddEquipment={() => closeFloatingCardThen(() => setShowEquipmentModal(true))}
             generateDepreciationSchedule={generateDepreciationSchedule}
+            scheduleOpen={scheduleOpen}
+            setScheduleOpen={setScheduleOpen}
+            selectedEquipment={selectedEquipment}
+            setSelectedEquipment={setSelectedEquipment}
           />
         </div>
 
