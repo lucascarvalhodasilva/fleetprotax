@@ -2,9 +2,9 @@ export const dynamic = 'force-static';
 
 export default function manifest() {
   return {
-    name: 'Fleet-Steuer',
-    short_name: 'Fleet-Steuer',
-    description: 'App zur Erfassung von steuerlichen Ausgaben',
+    name: 'FleetProTax',
+    short_name: 'FleetProTax',
+    description: 'App zur Erfassung von steuerlichen Ausgaben für Kuriere',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

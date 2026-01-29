@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Fleet-Steuer",
-  description: "Fleet-Steuer – App zur Erfassung von steuerlichen Ausgaben",
+  title: "FleetProTax",
+  description: "FleetProTax – App zur Erfassung von steuerlichen Ausgaben für Kuriere",
   icons: {
     icon: '/icon.png',
     shortcut: '/favicon.ico',

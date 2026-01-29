@@ -1,6 +1,6 @@
-# Fleet-Steuer Documentation
+# FleetProTax Documentation
 
-Comprehensive documentation for the Fleet-Steuer tax deduction tracking application.
+Comprehensive documentation for the FleetProTax tax deduction tracking application.
 
 ## 📂 Directory Structure
 

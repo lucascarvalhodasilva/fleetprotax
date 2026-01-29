@@ -1,5 +1,5 @@
 export const metadata = {
-  title: 'Werbungskosten | Fleet-Steuer',
+  title: 'Werbungskosten | FleetProTax',
   description: 'Verwalten Sie Ihre Werbungskosten, Verpflegungsmehraufwand und Fahrtkosten.',
 };
 

@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.carvalhodasilva.fleetsteuer"
+    namespace "com.carvalhodasilva.fleetprotax"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.carvalhodasilva.fleetsteuer"
+        applicationId "com.carvalhodasilva.fleetprotax"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

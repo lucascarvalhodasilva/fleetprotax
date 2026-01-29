@@ -1,4 +1,4 @@
-package com.carvalhodasilva.fleetsteuer;
+package com.carvalhodasilva.fleetprotax;
 
 import com.getcapacitor.BridgeActivity;
 

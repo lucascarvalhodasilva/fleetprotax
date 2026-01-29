@@ -1,4 +1,4 @@
-# Fleet-Steuer 🚗💼
+# FleetProTax 🚗💼
 
 **Steuerabzugs-Tracker für Fahrzeugkuriere**
 
@@ -27,7 +27,7 @@ Eine umfassende plattformübergreifende mobile Anwendung, entwickelt mit Next.js
 
 ## 🎯 Übersicht
 
-Fleet-Steuer ist eine spezialisierte Steuerverwaltungsanwendung für selbstständige Fahrzeugkuriere in Deutschland. Sie hilft bei der Verfolgung und Berechnung von steuerlich absetzbaren Ausgaben gemäß deutschem Steuerrecht, einschließlich:
+FleetProTax ist eine spezialisierte Steuerverwaltungsanwendung für selbstständige Fahrzeugkuriere in Deutschland. Sie hilft bei der Verfolgung und Berechnung von steuerlich absetzbaren Ausgaben gemäß deutschem Steuerrecht, einschließlich:
 
 - **Verpflegungspauschalen** (€14/€28 pro Tag)
 - **Kilometererfassung** mit automatischer Kostenberechnung (€0,30/km)
@@ -35,7 +35,7 @@ Fleet-Steuer ist eine spezialisierte Steuerverwaltungsanwendung für selbststän
 - **Belegverwaltung** mit PDF/Bild-Unterstützung
 - **Echtzeit-Steuerabzugsübersichten**
 
-### Warum Fleet-Steuer?
+### Warum FleetProTax?
 
 - ✅ **Deutsches Steuerrecht konform** - Folgt aktuellen Steuervorschriften
 - ✅ **Offline-first** - Funktioniert ohne Internetverbindung

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Fleet Steuer</string>
-    <string name="title_activity_main">Fleet Steuer</string>
-    <string name="package_name">com.carvalhodasilva.fleetsteuer</string>
-    <string name="custom_url_scheme">com.carvalhodasilva.fleetsteuer</string>
+    <string name="app_name">FleetProTax</string>
+    <string name="title_activity_main">FleetProTax</string>
+    <string name="package_name">com.carvalhodasilva.fleetprotax</string>
+    <string name="custom_url_scheme">com.carvalhodasilva.fleetprotax</string>
 </resources>
