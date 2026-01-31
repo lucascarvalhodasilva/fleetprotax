@@ -31,9 +31,26 @@ export const useSettings = () => {
   }, [defaultCommute, hasChanges]);
 
   const handleSave = () => {
+    const sanitizeCommute = (commute) => {
+      const next = { ...commute };
+
+      ['car', 'motorcycle', 'bike'].forEach((mode) => {
+        const rawDistance = parseFloat(commute[mode]?.distance);
+        const distance = Number.isFinite(rawDistance) && rawDistance > 0 ? rawDistance : 0;
+        const active = distance > 0 && !!commute[mode]?.active;
+        next[mode] = { active, distance };
+      });
+
+      // Public transport is not allowed as default
+      next.public_transport = { active: false, cost: '' };
+      return next;
+    };
+
     setIsSaving(true);
     setTimeout(() => {
-      setDefaultCommute(localDefaultCommute);
+      const sanitized = sanitizeCommute(localDefaultCommute);
+      setDefaultCommute(sanitized);
+      setLocalDefaultCommute(sanitized);
       setHasChanges(false);
       setIsSaving(false);
     }, 1300);

@@ -49,6 +49,33 @@ export const useTripForm = () => {
   const [initialEditData, setInitialEditData] = useState(null);
   const [initialReceiptPath, setInitialReceiptPath] = useState(null);
 
+  const sanitizeCommute = (commute = {}) => {
+    const next = { ...DEFAULT_COMMUTE, ...commute };
+
+    ['car', 'motorcycle', 'bike'].forEach((mode) => {
+      const rawDistance = parseFloat(commute[mode]?.distance);
+      const distance = Number.isFinite(rawDistance) && rawDistance > 0 ? rawDistance : 0;
+      next[mode] = {
+        ...DEFAULT_COMMUTE[mode],
+        ...commute[mode],
+        distance,
+        active: distance > 0 && !!commute[mode]?.active
+      };
+    });
+
+    const rawCost = parseFloat(commute.public_transport?.cost);
+    const cost = Number.isFinite(rawCost) && rawCost > 0 ? rawCost : 0;
+    const ptActive = cost > 0 && !!commute.public_transport?.active;
+    next.public_transport = {
+      ...DEFAULT_COMMUTE.public_transport,
+      ...commute.public_transport,
+      cost: ptActive ? cost : '',
+      active: ptActive
+    };
+
+    return next;
+  };
+
   // Load saved form data from local storage (excluding dates - they should start empty)
   useEffect(() => {
     const savedData = localStorage.getItem('TRIPS_FORM_DATA');
@@ -341,6 +368,7 @@ export const useTripForm = () => {
       let duration = null;
       let rate = 0;
       let deductible = 0;
+      let ticketCost = null;
 
       if (!isOngoing) {
         const tripStart = new Date(`${startDate}T${startTime}`);
@@ -359,16 +387,30 @@ export const useTripForm = () => {
         deductible = Math.max(0, rate - parseFloat(formData.employerExpenses));
       }
 
+      const hasPublicTransportReceipt = !!tempPublicTransportReceiptPath;
+
+      // Validation: If a receipt was uploaded for public transport, require a cost
+      if (formData.commute.public_transport.active && hasPublicTransportReceipt) {
+        ticketCost = parseFloat(formData.commute.public_transport.cost);
+        if (!Number.isFinite(ticketCost) || ticketCost <= 0) {
+          setSubmitError("Bitte Betrag für Öffi-Kosten eingeben.");
+          setIsSubmitting(false);
+          return;
+        }
+      } else if (formData.commute.public_transport.active) {
+        ticketCost = parseFloat(formData.commute.public_transport.cost);
+      }
+
       // Validation: Public Transport Receipt (skip for ongoing trips)
       if (!isOngoing && formData.commute.public_transport.active) {
-        const cost = parseFloat(formData.commute.public_transport.cost);
-        if (cost > 0 && !tempPublicTransportReceiptPath) {
+        if (ticketCost > 0 && !hasPublicTransportReceipt) {
           setSubmitError("Bitte Beleg für Öffi-Ticket hochladen.");
           setIsSubmitting(false);
           return;
         }
       }
 
+      const sanitizedCommute = sanitizeCommute(formData.commute);
       const tripId = editingId || Date.now();
 
     // If editing: remove existing trip + related mileage entries first
@@ -387,7 +429,8 @@ export const useTripForm = () => {
       duration,
       rate,
       deductible: parseFloat(deductible.toFixed(2)),
-      isOngoing
+      isOngoing,
+      commute: sanitizedCommute
     });
 
     // Auto-add station trips for active modes (only for completed trips)
@@ -395,8 +438,8 @@ export const useTripForm = () => {
       const modes = ['car', 'motorcycle', 'bike'];
       
       modes.forEach(mode => {
-        if (formData.commute[mode].active) {
-          const dist = formData.commute[mode].distance;
+        if (sanitizedCommute[mode].active) {
+          const dist = sanitizedCommute[mode].distance;
           if (dist > 0) {
             const ratePerKm = getMileageRate(mode);
             const allowance = parseFloat((dist * ratePerKm).toFixed(2));
@@ -432,8 +475,7 @@ export const useTripForm = () => {
     }
 
     // Add Public Transport / Ticket Entry (only for completed trips)
-    if (!isOngoing && formData.commute.public_transport.active) {
-      const ticketCost = parseFloat(formData.commute.public_transport.cost);
+    if (!isOngoing && sanitizedCommute.public_transport.active) {
       if (ticketCost > 0) {
         let receiptFileName = null;
         if (tempPublicTransportReceiptPath) {
@@ -592,9 +634,17 @@ export const useTripForm = () => {
     editingId,
     startEdit,
     cancelEdit,
-    hasChanges: editingId ? (
-      JSON.stringify(formData) !== JSON.stringify(initialEditData) || 
-      tempPublicTransportReceiptPath !== initialReceiptPath
-    ) : true
+    hasChanges: editingId ? (() => {
+      const normalizeForm = (form) => ({
+        ...form,
+        commute: sanitizeCommute(form?.commute)
+      });
+      const current = normalizeForm(formData);
+      const initial = normalizeForm(initialEditData || {});
+      return (
+        JSON.stringify(current) !== JSON.stringify(initial) ||
+        tempPublicTransportReceiptPath !== initialReceiptPath
+      );
+    })() : true
   };
 }; 

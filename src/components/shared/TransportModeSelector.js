@@ -79,6 +79,7 @@ export const TRANSPORT_MODES = ['car', 'motorcycle', 'bike', 'public_transport']
  * @property {Function} onToggle - Callback when a mode is toggled (receives mode key)
  * @property {string} [variant] - Visual variant: 'default' | 'compact'
  * @property {string} [className] - Additional CSS classes for the container
+ * @property {string[]} [excludeModes] - Modes to hide (e.g., ['public_transport'])
  */
 
 /**
@@ -92,11 +93,14 @@ export default function TransportModeSelector({
   commuteData, 
   onToggle,
   variant = 'default',
-  className = ''
+  className = '',
+  excludeModes = []
 }) {
+  const modes = TRANSPORT_MODES.filter(mode => !excludeModes.includes(mode));
+
   return (
     <div className={`grid grid-cols-4 gap-2 ${className}`}>
-      {TRANSPORT_MODES.map(mode => {
+      {modes.map(mode => {
         const isActive = commuteData[mode]?.active;
         
         if (variant === 'compact') {

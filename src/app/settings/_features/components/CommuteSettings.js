@@ -1,14 +1,21 @@
 import React from 'react';
-import NumberInput from '@/components/shared/NumberInput';
 import TransportModeSelector, { DistanceSliderCompact } from '@/components/shared/TransportModeSelector';
 
 export default function CommuteSettings({ localDefaultCommute, setLocalDefaultCommute, setHasChanges }) {
   const handleToggle = (mode) => {
+    const dist = Number(localDefaultCommute[mode]?.distance) || 0;
+    const wasActive = !!localDefaultCommute[mode]?.active;
+    const nextActive = !wasActive;
+
     setLocalDefaultCommute(prev => ({
       ...prev,
-      [mode]: { ...prev[mode], active: !prev[mode].active }
+      [mode]: { ...prev[mode], active: nextActive }
     }));
-    setHasChanges(true);
+
+    // Only mark as changed when deactivating a mode that currently has a distance
+    if (wasActive && !nextActive && dist > 0) {
+      setHasChanges(true);
+    }
   };
 
   const handleDistanceChange = (mode, distance) => {
@@ -31,6 +38,7 @@ export default function CommuteSettings({ localDefaultCommute, setLocalDefaultCo
         <TransportModeSelector
           commuteData={localDefaultCommute}
           onToggle={handleToggle}
+          excludeModes={['public_transport']}
         />
 
         {/* Active Inputs */}
@@ -65,26 +73,7 @@ export default function CommuteSettings({ localDefaultCommute, setLocalDefaultCo
             />
           )}
 
-          {/* Public Transport Input */}
-          {localDefaultCommute.public_transport.active && (
-            <div className="space-y-2 p-3 bg-secondary/30 rounded-lg border border-border/50">
-              <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Kosten (Gesamt)</label>
-              <NumberInput
-                className="input-modern text-sm bg-card"
-                value={localDefaultCommute.public_transport.cost}
-                onChange={e => {
-                  const val = e.target.value;
-                  setLocalDefaultCommute(prev => ({
-                    ...prev,
-                    public_transport: { ...prev.public_transport, cost: val }
-                  }));
-                  setHasChanges(true);
-                }}
-                placeholder="0.00"
-              />
-              <p className="text-[10px] text-muted-foreground">Für Taxi, Uber, Roller, Bahn, Bus oder andere Tickets/Kosten.</p>
-            </div>
-          )}
+          {/* Public transport intentionally not configurable as default */}
         </div>
       </div>
     </div>
