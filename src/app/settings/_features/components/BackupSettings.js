@@ -124,30 +124,35 @@ export default function BackupSettings() {
         // Add backup.json using the service
         zip.file('backup.json', JSON.stringify(backupData, null, 2));
 
-        // Belege aus receipts hinzufügen (falls vorhanden)
+        // Add receipts from Documents/receipts/ (if available)
         try {
           const dir = await Filesystem.readdir({
             path: 'receipts',
             directory: Directory.Documents
           });
-          const files = dir.files || dir;
+          const files = dir.files || (Array.isArray(dir) ? dir : []);
+          console.log('Found receipts:', files.length, files);
+          
           if (files && files.length > 0) {
             for (const f of files) {
-              const name = f.name || f;
+              const name = typeof f === 'string' ? f : f.name;
               if (!name) continue;
+              
               try {
                 const file = await Filesystem.readFile({
                   path: `receipts/${name}`,
                   directory: Directory.Documents
                 });
+                // file.data is base64 string
                 zip.file(`receipts/${name}`, file.data, { base64: true });
+                console.log('Added receipt to backup:', name);
               } catch (readErr) {
-                console.warn(`Beleg ${name} konnte nicht ins Backup aufgenommen werden:`, readErr);
+                console.error(`Could not add receipt ${name} to backup:`, readErr);
               }
             }
           }
         } catch (dirErr) {
-          // Ordner existiert evtl. nicht – ignorieren
+          console.warn('Could not read receipts directory:', dirErr);
         }
 
         const zipBase64 = await zip.generateAsync({ type: 'base64' });
