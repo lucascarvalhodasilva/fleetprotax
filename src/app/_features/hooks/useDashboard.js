@@ -18,13 +18,16 @@ export const useDashboard = () => {
     (monthlyEmployerExpenses || []).filter(e => e.year === selectedYear),
   [monthlyEmployerExpenses, selectedYear]);
 
-  const totalTrips = useMemo(() => 
-    filteredTrips.reduce((sum, entry) => {
-      const mealAllowance = entry.mealAllowance || 0;
-      const transportSum = entry.sumTransportAllowances || 0;
-      return sum + mealAllowance + transportSum;
-    }, 0),
+  const totalMealAllowance = useMemo(() => 
+    filteredTrips.reduce((sum, entry) => sum + (entry.mealAllowance || 0), 0),
   [filteredTrips]);
+
+  const totalTransportCosts = useMemo(() => 
+    filteredTrips.reduce((sum, entry) => sum + (entry.sumTransportAllowances || 0), 0),
+  [filteredTrips]);
+
+  const totalTrips = useMemo(() => totalMealAllowance + totalTransportCosts,
+  [totalMealAllowance, totalTransportCosts]);
   
   // Calculate Equipment Depreciation for Selected Year
   const totalEquipment = useMemo(() => equipmentEntries.reduce((sum, entry) => {
@@ -76,16 +79,62 @@ export const useDashboard = () => {
 
   // Combine and sort recent activities
   const recentActivities = useMemo(() => {
+    const calculateEquipmentAmount = (entry) => {
+      const purchaseDate = new Date(entry.date);
+      const purchaseYear = purchaseDate.getFullYear();
+      const currentYear = parseInt(selectedYear);
+      const price = parseFloat(entry.price);
+      
+      // GWG
+      if (price <= (taxRates?.gwgLimit || 952)) {
+        return purchaseYear === currentYear ? price : 0;
+      }
+      
+      // Depreciation
+      const usefulLifeYears = 3;
+      const endYear = purchaseYear + usefulLifeYears;
+      
+      if (currentYear < purchaseYear || currentYear > endYear) return 0;
+      
+      let monthsInCurrentYear = 0;
+      if (currentYear === purchaseYear) {
+        monthsInCurrentYear = 12 - purchaseDate.getMonth();
+      } else if (currentYear < endYear) {
+        monthsInCurrentYear = 12;
+      } else if (currentYear === endYear) {
+        monthsInCurrentYear = purchaseDate.getMonth();
+      }
+      
+      if (monthsInCurrentYear <= 0) return 0;
+      
+      const monthlyDepreciation = price / (usefulLifeYears * 12);
+      return monthlyDepreciation * monthsInCurrentYear;
+    };
+
     const activities = [
-      ...tripEntries.map(e => ({ 
+      ...filteredTrips.map(e => ({ 
         ...e, 
         type: 'Reise', 
         amount: (e.mealAllowance || 0) + (e.sumTransportAllowances || 0) 
       })),
-      ...equipmentEntries.map(e => ({ ...e, type: 'Arbeitsmittel', amount: e.deductibleAmount }))
+      ...equipmentEntries
+        .filter(e => {
+          const purchaseDate = new Date(e.date);
+          const purchaseYear = purchaseDate.getFullYear();
+          const currentYear = parseInt(selectedYear);
+          const price = parseFloat(e.price);
+          const usefulLifeYears = 3;
+          const endYear = purchaseYear + usefulLifeYears;
+          return currentYear >= purchaseYear && currentYear <= endYear;
+        })
+        .map(e => ({ 
+          ...e, 
+          type: 'Arbeitsmittel', 
+          amount: calculateEquipmentAmount(e) 
+        }))
     ];
     return activities.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
-  }, [tripEntries, equipmentEntries]);
+  }, [filteredTrips, equipmentEntries, selectedYear, taxRates]);
 
   // Simulate initial data loading (in real app, this would wait for data fetch)
   useEffect(() => {
@@ -101,6 +150,8 @@ export const useDashboard = () => {
     selectedYear,
     grandTotal,
     totalTrips,
+    totalMealAllowance,
+    totalTransportCosts,
     totalEquipment,
     totalEmployerReimbursement,
     totalExpenses,

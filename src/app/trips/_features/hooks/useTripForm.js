@@ -474,15 +474,17 @@ export const useTripForm = () => {
     // Calculate sum of transport allowances
     const sumTransportAllowances = calculateTransportSum(transportRecords);
 
+    // Destructure to exclude commute - it's only for UI, not for storage
+    const { commute, ...tripDataWithoutCommute } = formData;
+    
     addTripEntry({
-      ...formData,
+      ...tripDataWithoutCommute,
       id: tripId,
       endDate: isOngoing ? '' : finalEndDate,
       endTime: isOngoing ? '' : formData.endTime,
       duration,
       mealAllowance: parseFloat(netMealAllowance.toFixed(2)),
       isOngoing,
-      commute: sanitizedCommute,
       transportRecords,
       sumTransportAllowances
     });
@@ -514,6 +516,31 @@ export const useTripForm = () => {
 };
 
   const startEdit = async (entry) => {
+    // Reconstruct commute from transportRecords for editing
+    const reconstructedCommute = { ...DEFAULT_COMMUTE };
+    const transportRecords = entry.transportRecords || [];
+    
+    // Extract commute info from transportRecords
+    ['car', 'motorcycle', 'bike'].forEach(mode => {
+      const modeRecords = transportRecords.filter(r => r.vehicleType === mode);
+      if (modeRecords.length > 0) {
+        // Sum distances (they were split into 2 records)
+        const totalDistance = modeRecords.reduce((sum, r) => sum + (r.distance || 0), 0);
+        reconstructedCommute[mode] = {
+          active: true,
+          distance: totalDistance
+        };
+      }
+    });
+    
+    const publicTransportRecord = transportRecords.find(r => r.vehicleType === 'public_transport');
+    if (publicTransportRecord) {
+      reconstructedCommute.public_transport = {
+        active: true,
+        cost: publicTransportRecord.allowance || ''
+      };
+    }
+    
     const editData = {
       destination: entry.destination || '',
       date: entry.date || '',
@@ -521,11 +548,10 @@ export const useTripForm = () => {
       startTime: entry.startTime || '',
       endTime: entry.endTime || '',
       employerExpenses: entry.employerExpenses || 0,
-      commute: entry.commute || defaultCommute || DEFAULT_COMMUTE
+      commute: reconstructedCommute
     };
     
     // Restore receipt if exists from nested transportRecords
-    const transportRecords = entry.transportRecords || [];
     const transportEntry = transportRecords.find(t => t.vehicleType === 'public_transport' && t.receiptFileName);
     
     let loadedReceipt = null;

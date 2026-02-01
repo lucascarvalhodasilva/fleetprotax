@@ -4,7 +4,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 
 const AppContext = createContext();
 
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 const DATA_VERSION_KEY = 'appDataVersion';
 const DISTANCE_MIGRATION_VERSION = '1.0.1';
 
@@ -534,25 +534,82 @@ const migrateTripTransportDistances = (trips = [], taxRates = {}) => {
   };
 
   return trips.map((trip) => {
-    const nextRecords = (trip.transportRecords || []).map((record) => {
-      if (!rates[record.vehicleType]) return record;
+    let nextRecords = [];
+    
+    // If trip has no transportRecords, regenerate from commute data
+    if (!trip.transportRecords || trip.transportRecords.length === 0) {
+      // Regenerate from commute data (which was already doubled in migrateCommuteDistances)
+      const commute = trip.commute || {};
+      ['car', 'motorcycle', 'bike'].forEach(mode => {
+        if (commute[mode]?.active) {
+          const distance = commute[mode].distance || 0;
+          if (distance > 0) {
+            const perRecordDistance = distance / 2;
+            const allowance = parseFloat((perRecordDistance * rates[mode]).toFixed(2));
+            
+            nextRecords.push({
+              id: `migrated_${trip.id}_${mode}_out`,
+              date: trip.date,
+              distance: perRecordDistance,
+              totalKm: perRecordDistance,
+              allowance,
+              vehicleType: mode,
+              destination: 'Bahnhof'
+            });
+            
+            nextRecords.push({
+              id: `migrated_${trip.id}_${mode}_return`,
+              date: trip.endDate || trip.date,
+              distance: perRecordDistance,
+              totalKm: perRecordDistance,
+              allowance,
+              vehicleType: mode,
+              destination: 'Bahnhof (Rückfahrt)'
+            });
+          }
+        }
+      });
+      
+      // Add public transport if present
+      if (commute.public_transport?.active) {
+        const cost = parseFloat(commute.public_transport.cost);
+        if (Number.isFinite(cost) && cost > 0) {
+          nextRecords.push({
+            id: `migrated_${trip.id}_public_transport`,
+            date: trip.date,
+            distance: 0,
+            totalKm: 0,
+            allowance: cost,
+            vehicleType: 'public_transport',
+            destination: 'Öffentliche Verkehrsmittel'
+          });
+        }
+      }
+    } else {
+      // If transportRecords exist, update each record's distance and allowance
+      nextRecords = trip.transportRecords.map((record) => {
+        if (!rates[record.vehicleType]) return record;
 
-      const baseDistance = Number.isFinite(record.distance) ? record.distance : 0;
-      const baseTotalKm = Number.isFinite(record.totalKm) ? record.totalKm : baseDistance;
-      const nextDistance = baseDistance * 2;
-      const nextTotalKm = baseTotalKm * 2;
-      const allowance = parseFloat((nextDistance * rates[record.vehicleType]).toFixed(2));
+        const baseDistance = Number.isFinite(record.distance) ? record.distance : 0;
+        const baseTotalKm = Number.isFinite(record.totalKm) ? record.totalKm : baseDistance;
+        const nextDistance = baseDistance * 2;
+        const nextTotalKm = baseTotalKm * 2;
+        const allowance = parseFloat((nextDistance * rates[record.vehicleType]).toFixed(2));
 
-      return {
-        ...record,
-        distance: nextDistance,
-        totalKm: nextTotalKm,
-        allowance
-      };
-    });
+        return {
+          ...record,
+          distance: nextDistance,
+          totalKm: nextTotalKm,
+          allowance
+        };
+      });
+    }
+
+    // Remove commute field - transportRecords are now the source of truth
+    const { commute, ...tripWithoutCommute } = trip;
 
     return {
-      ...trip,
+      ...tripWithoutCommute,
       transportRecords: nextRecords,
       sumTransportAllowances: calculateTransportSum(nextRecords)
     };
@@ -637,12 +694,17 @@ export function AppProvider({ children}) {
       initialTaxRates
     );
 
-    setTripEntries(migrated.trips || []);
+    const migratedTrips = migrated.trips || [];
+    setTripEntries(migratedTrips);
     setMonthlyEmployerExpenses(initialMonthlyExpenses);
     setEquipmentEntries(initialEquipmentEntries);
     setExpenseEntries(initialExpenseEntries);
     setDefaultCommute(migrated.defaultCommute || initialDefaultCommute);
     setTaxRates(initialTaxRates);
+    
+    // Save migrated data back to localStorage
+    localStorage.setItem('mealEntries', JSON.stringify(migratedTrips));
+    localStorage.setItem('defaultCommute', JSON.stringify(migrated.defaultCommute || initialDefaultCommute));
     localStorage.setItem(DATA_VERSION_KEY, APP_VERSION);
   }, []);
 

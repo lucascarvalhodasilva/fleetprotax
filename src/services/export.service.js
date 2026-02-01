@@ -1,7 +1,7 @@
 /**
  * Export Service
  * Handles data export and backup operations
- * Version: 1.0.1 - Total-distance semantics for transport records
+ * Version: 1.0.2 - Fixed migration of transport records from v1.0.0
  */
 
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -22,7 +22,7 @@ export const exportToJSON = async (data) => {
   const exportData = {
     ...data,
     exportDate: new Date().toISOString(),
-    version: '1.0.1',
+    version: '1.0.2',
     format: 'fleetprotax-export-v1'
   };
   return JSON.stringify(exportData, null, 2);

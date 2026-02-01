@@ -63,7 +63,8 @@ const KPIItem = ({ icon, label, value, variant = 'default', onClick }) => {
  * @typedef {Object} DashboardKPIsProps
  * @property {number} selectedYear - The currently selected tax year
  * @property {number} grandTotal - Total tax-deductible amount
- * @property {number} totalTrips - Total trip costs (Verpflegung + Fahrtkosten)
+ * @property {number} totalMealAllowance - Total meal allowances (Verpflegung)
+ * @property {number} totalTransportCosts - Total transport costs (Reisekosten)
  * @property {number} totalEquipment - Total work equipment costs (Arbeitsmittel)
  * @property {number} totalEmployerReimbursement - Total employer reimbursements (Spesen)
  * @property {number} totalExpenses - Total private expenses
@@ -81,7 +82,8 @@ const KPIItem = ({ icon, label, value, variant = 'default', onClick }) => {
  * <DashboardKPIs
  *   selectedYear={2025}
  *   grandTotal={5000}
- *   totalTrips={3700}
+ *   totalMealAllowance={1200}
+ *   totalTransportCosts={2500}
  *   totalEquipment={800}
  *   totalEmployerReimbursement={500}
  *   totalExpenses={300}
@@ -91,7 +93,8 @@ const KPIItem = ({ icon, label, value, variant = 'default', onClick }) => {
 export default function DashboardKPIs({ 
   selectedYear, 
   grandTotal, 
-  totalTrips, 
+  totalMealAllowance,
+  totalTransportCosts,
   totalEquipment, 
   totalEmployerReimbursement, 
   totalExpenses, 
@@ -166,8 +169,17 @@ export default function DashboardKPIs({
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h18M3 12h18M3 17h18" />
             </svg>
           }
-          label="Dienstreisen"
-          value={`${totalTrips.toFixed(2)} €`}
+          label="Verpflegung"
+          value={`${totalMealAllowance.toFixed(2)} €`}
+        />
+        <KPIItem
+          icon={
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h18M3 12h18M3 17h18" />
+            </svg>
+          }
+          label="Reisekosten"
+          value={`${totalTransportCosts.toFixed(2)} €`}
         />
         <KPIItem
           icon={

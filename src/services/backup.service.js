@@ -1,15 +1,15 @@
 /**
  * Backup Service
  * Handles backup creation, parsing, validation and import for FleetProTax
- * Version: 1.0.1 - Total-distance semantics for transport records
+ * Version: 1.0.2 - Fixed migration of transport records from v1.0.0
  */
 
 import { Capacitor } from '@capacitor/core';
 import JSZip from 'jszip';
 
 // App version - should match package.json
-const APP_VERSION = '1.0.1'; // Total-distance semantics for transport records
-const BACKUP_VERSION = '1.0.1'; // Matches APP_VERSION
+const APP_VERSION = '1.0.2'; // Fixed migration of transport records from v1.0.0
+const BACKUP_VERSION = '1.0.2'; // Matches APP_VERSION
 const BACKUP_FORMAT = 'fleetprotax-backup-v1';
 
 /**
@@ -168,9 +168,9 @@ export const validateBackup = (data) => {
   // Get backup version
   const version = data.backup?.version;
   
-  // Accept v1.0.0 and v1.0.1 (migration will handle 1.0.0)
-  if (!['1.0.0', '1.0.1'].includes(version)) {
-    errors.push(`Inkompatible Backup-Version: ${version} (erwartet: 1.0.0 oder 1.0.1)`);
+  // Accept v1.0.0, v1.0.1, and v1.0.2 (migration will handle older versions)
+  if (!["1.0.0", "1.0.1", "1.0.2"].includes(version)) {
+    errors.push(`Inkompatible Backup-Version: ${version} (erwartet: 1.0.0, 1.0.1 oder 1.0.2)`);
   }
   
   // Check app structure
