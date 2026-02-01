@@ -65,11 +65,10 @@ const calculateMetadata = (data) => {
   } : null;
   
   // Count receipts
-  const receiptsCount = [
-    ...equipment.filter(e => e.receiptFileName).length,
-    ...expenses.filter(e => e.receiptFileName).length,
-    ...mileage.filter(m => m.receiptFileName).length
-  ].reduce((a, b) => a + b, 0);
+  const receiptsCount = 
+    equipment.filter(e => e.receiptFileName).length +
+    expenses.filter(e => e.receiptFileName).length +
+    mileage.filter(m => m.receiptFileName).length;
   
   return {
     totalEntries,
