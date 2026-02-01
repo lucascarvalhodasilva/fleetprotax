@@ -571,6 +571,22 @@ export function AppProvider({ children }) {
     if (!data) return false;
     
     try {
+      // Support v2.0.0 format (new structure with correct naming)
+      if (data.trips) setTripEntries(data.trips);
+      if (data.mileage) setMileageEntries(data.mileage);
+      if (data.equipment) setEquipmentEntries(data.equipment);
+      if (data.expenses) setExpenseEntries(data.expenses);
+      
+      // Handle settings object (v2.0.0 format)
+      if (data.settings) {
+        if (data.settings.monthlyEmployerExpenses) setMonthlyEmployerExpenses(data.settings.monthlyEmployerExpenses);
+        if (data.settings.defaultCommute) setDefaultCommute(data.settings.defaultCommute);
+        if (data.settings.taxRates) setTaxRates(data.settings.taxRates);
+        if (data.settings.selectedYear) setSelectedYear(data.settings.selectedYear);
+      }
+      
+      // Legacy support for old v1 format (backwards compatibility)
+      // This handles old backups that might still exist
       if (data.mealEntries) setTripEntries(data.mealEntries);
       if (data.mileageEntries) setMileageEntries(data.mileageEntries);
       if (data.equipmentEntries) setEquipmentEntries(data.equipmentEntries);
@@ -579,6 +595,7 @@ export function AppProvider({ children }) {
       if (data.defaultCommute) setDefaultCommute(data.defaultCommute);
       if (data.taxRates) setTaxRates(data.taxRates);
       if (data.selectedYear) setSelectedYear(data.selectedYear);
+      
       return true;
     } catch (e) {
       console.error("Import failed", e);

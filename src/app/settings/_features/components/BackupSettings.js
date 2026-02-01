@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import JSZip from 'jszip';
 import { LoadingButton } from '@/components/shared/skeletons';
+import BackupService from '@/services/backup.service';
 
 export default function BackupSettings() {
   const {
@@ -31,36 +32,36 @@ export default function BackupSettings() {
   const [selectedName, setSelectedName] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoreStatus, setRestoreStatus] = useState(null); // { type: 'success' | 'error', message: string }
+  const [backupPreview, setBackupPreview] = useState(null); // Preview data before import
 
   const handleCreateBackup = async () => {
     setIsBackingUp(true);
     setBackupStatus(null);
 
-    const backupData = {
-      version: 1,
-      timestamp: new Date().toISOString(),
-      data: {
-        mealEntries: tripEntries,
-        mileageEntries,
-        equipmentEntries,
-        expenseEntries,
+    // Create v2.0.0 backup data structure
+    const backupData = BackupService.createBackupData({
+      trips: tripEntries,
+      mileage: mileageEntries,
+      equipment: equipmentEntries,
+      expenses: expenseEntries,
+      settings: {
         monthlyEmployerExpenses,
         defaultCommute,
         taxRates,
         selectedYear
       }
-    };
+    });
 
     try {
       if (!Capacitor.isNativePlatform()) {
         // Web-Fallback: ZIP erzeugen und Download/Save-Dialog anbieten
         const zip = new JSZip();
-        zip.file('backup.json', JSON.stringify(backupData, null, 2));
-        const blob = await zip.generateAsync({ type: 'blob' });
+        const blob = await BackupService.createBackupBlob(backupData, zip);
+        const fileName = BackupService.generateFileName();
 
         if (window.showSaveFilePicker) {
           const handle = await window.showSaveFilePicker({
-            suggestedName: `backup_full_${Date.now()}.zip`,
+            suggestedName: fileName,
             types: [{
               description: 'Backup ZIP',
               accept: { 'application/zip': ['.zip'] }
@@ -71,12 +72,12 @@ export default function BackupSettings() {
           await writable.close();
         } else if (window.navigator && typeof window.navigator.msSaveOrOpenBlob === 'function') {
           // Legacy Edge/IE Save Dialog
-          window.navigator.msSaveOrOpenBlob(blob, `backup_full_${Date.now()}.zip`);
+          window.navigator.msSaveOrOpenBlob(blob, fileName);
         } else {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `backup_full_${Date.now()}.zip`;
+          a.download = fileName;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -86,7 +87,6 @@ export default function BackupSettings() {
         setBackupStatus('success'); 
         setTimeout(() => setBackupStatus(null), 3000);
       } else {
-        const timestamp = Date.now();
         const zip = new JSZip();
         let sharedSuccessfully = false;
 
@@ -120,11 +120,11 @@ export default function BackupSettings() {
         }
 
         const zipBase64 = await zip.generateAsync({ type: 'base64' });
-        const zipPath = `backup_full_${timestamp}.zip`;
+        const fileName = BackupService.generateFileName();
 
         // Datei nur temporär (Cache) ablegen, damit Nutzer den Zielort über Share wählt
         const zipResult = await Filesystem.writeFile({
-          path: zipPath,
+          path: fileName,
           data: zipBase64,
           directory: Directory.Cache,
           recursive: true
@@ -133,7 +133,7 @@ export default function BackupSettings() {
         // Share-Sheet öffnen, damit Nutzer Ziel wählen kann; danach temporäre Datei entfernen
         try {
           const uriResult = await Filesystem.getUri({
-            path: zipPath,
+            path: fileName,
             directory: Directory.Cache
           });
           const shareResult = await Share.share({
@@ -149,7 +149,7 @@ export default function BackupSettings() {
         } finally {
           try {
             await Filesystem.deleteFile({
-              path: zipPath,
+              path: fileName,
               directory: Directory.Cache
             });
           } catch (deleteErr) {
@@ -301,16 +301,58 @@ export default function BackupSettings() {
   };
 
   // Restore Logic
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     setSelectedFile(file || null);
     setSelectedName(file ? file.name : '');
     setRestoreStatus(null);
-  };
-
-  const parseBackupFromJsonString = (jsonString) => {
-    const parsed = JSON.parse(jsonString);
-    return parsed.data || parsed;
+    setBackupPreview(null);
+    
+    // Validate and preview backup
+    if (file) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const fileNameLower = file.name.toLowerCase();
+        let backupString = null;
+        
+        if (fileNameLower.endsWith('.zip')) {
+          const zip = await JSZip.loadAsync(arrayBuffer);
+          const backupFile = zip.file('backup.json');
+          if (!backupFile) {
+            setRestoreStatus({ type: 'error', message: 'In der ZIP wurde keine backup.json gefunden.' });
+            setSelectedFile(null);
+            setSelectedName('');
+            return;
+          }
+          backupString = await backupFile.async('string');
+        } else {
+          backupString = new TextDecoder().decode(arrayBuffer);
+        }
+        
+        // Parse and validate
+        const result = BackupService.parseBackup(backupString);
+        
+        if (!result.isValid) {
+          setRestoreStatus({ 
+            type: 'error', 
+            message: `Backup ungültig: ${result.errors.join(', ')}` 
+          });
+          setSelectedFile(null);
+          setSelectedName('');
+          return;
+        }
+        
+        // Set preview data
+        setBackupPreview(result.data);
+      } catch (error) {
+        setRestoreStatus({ 
+          type: 'error', 
+          message: `Datei konnte nicht gelesen werden: ${error.message}` 
+        });
+        setSelectedFile(null);
+        setSelectedName('');
+      }
+    }
   };
 
   const writeReceiptsIfAny = async (zipInstance) => {
@@ -366,8 +408,8 @@ export default function BackupSettings() {
   };
 
   const handleRestore = async () => {
-    if (!selectedFile) {
-      setRestoreStatus({ type: 'error', message: 'Bitte zuerst eine Backup-Datei auswählen (ZIP oder backup.json).' });
+    if (!selectedFile || !backupPreview) {
+      setRestoreStatus({ type: 'error', message: 'Bitte zuerst eine gültige Backup-Datei auswählen.' });
       return;
     }
 
@@ -377,28 +419,15 @@ export default function BackupSettings() {
     try {
       const arrayBuffer = await selectedFile.arrayBuffer();
       const fileNameLower = selectedFile.name.toLowerCase();
-      let backupData = null;
       let receiptsInfo = { restored: 0, total: 0 };
 
       if (fileNameLower.endsWith('.zip')) {
         const zip = await JSZip.loadAsync(arrayBuffer);
-        const backupFile = zip.file('backup.json');
-        if (!backupFile) {
-          throw new Error('In der ZIP wurde keine backup.json gefunden.');
-        }
-        const backupString = await backupFile.async('string');
-        backupData = parseBackupFromJsonString(backupString);
         receiptsInfo = await writeReceiptsIfAny(zip);
-      } else {
-        const backupString = new TextDecoder().decode(arrayBuffer);
-        backupData = parseBackupFromJsonString(backupString);
       }
 
-      if (!backupData) {
-        throw new Error('Backup enthält keine Daten.');
-      }
-
-      const success = importData(backupData);
+      // Import validated data (already parsed in handleFileChange)
+      const success = importData(backupPreview.data);
       if (!success) {
         throw new Error('Import fehlgeschlagen.');
       }
@@ -410,8 +439,11 @@ export default function BackupSettings() {
 
       setRestoreStatus({
         type: 'success',
-        message: `Backup geladen. ${receiptNote}`
+        message: `Backup erfolgreich geladen. ${receiptNote}`
       });
+      
+      // Clear preview after successful import
+      setBackupPreview(null);
     } catch (e) {
       console.error('Restore failed:', e);
       const message = e?.message || 'Wiederherstellung fehlgeschlagen.';
@@ -473,6 +505,73 @@ export default function BackupSettings() {
               ref={fileInputRef}
             />
 
+            {/* Backup Preview */}
+            {backupPreview && backupPreview.metadata && (
+              <div className="border border-border rounded-lg p-4 bg-surface space-y-3">
+                <h4 className="text-sm font-semibold text-foreground">Backup-Vorschau</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Version:</span>
+                    <span className="text-foreground font-medium">{backupPreview.backup?.version || 'Unbekannt'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Erstellt:</span>
+                    <span className="text-foreground font-medium">
+                      {backupPreview.backup?.createdAt 
+                        ? new Date(backupPreview.backup.createdAt).toLocaleString('de-DE')
+                        : 'Unbekannt'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Plattform:</span>
+                    <span className="text-foreground font-medium capitalize">{backupPreview.app?.platform || 'Unbekannt'}</span>
+                  </div>
+                  <div className="border-t border-border pt-2 mt-2">
+                    <p className="text-muted-foreground mb-2">Daten:</p>
+                    <div className="space-y-1 pl-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">• Fahrten:</span>
+                        <span className="text-foreground">{backupPreview.data?.trips?.length || 0} Einträge</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">• Kilometer:</span>
+                        <span className="text-foreground">{backupPreview.data?.mileage?.length || 0} Einträge</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">• Betriebsmittel:</span>
+                        <span className="text-foreground">{backupPreview.data?.equipment?.length || 0} Einträge</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">• Ausgaben:</span>
+                        <span className="text-foreground">{backupPreview.data?.expenses?.length || 0} Einträge</span>
+                      </div>
+                      {backupPreview.metadata?.hasReceipts && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">• Belege:</span>
+                          <span className="text-foreground">{backupPreview.metadata.receiptsCount} Dateien</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {backupPreview.metadata?.dateRange && (
+                    <div className="border-t border-border pt-2 mt-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Zeitraum:</span>
+                        <span className="text-foreground text-xs">
+                          {new Date(backupPreview.metadata.dateRange.start).toLocaleDateString('de-DE')} - {new Date(backupPreview.metadata.dateRange.end).toLocaleDateString('de-DE')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded p-2 mt-3">
+                  <p className="text-yellow-600 dark:text-yellow-400 text-xs font-medium">
+                    ⚠️ Aktuelle Daten werden überschrieben!
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center space-x-4">
               <LoadingButton
                 onClick={() => {
@@ -501,6 +600,7 @@ export default function BackupSettings() {
                     setSelectedFile(null);
                     setSelectedName('');
                     setRestoreStatus(null);
+                    setBackupPreview(null);
                     if (fileInputRef.current) fileInputRef.current.value = '';
                   }}
                   className="text-sm text-muted-foreground hover:text-foreground px-2"
