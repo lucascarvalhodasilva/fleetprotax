@@ -143,10 +143,9 @@ export default function TransportModeSelector({
 /**
  * @typedef {Object} DistanceSliderProps
  * @property {string} mode - Transport mode key
- * @property {number} distance - Current distance value (one-way)
- * @property {Function} onChange - Callback when distance changes (receives new one-way distance)
+ * @property {number} distance - Current distance value (total)
+ * @property {Function} onChange - Callback when distance changes (receives new total distance)
  * @property {number} [maxDistance] - Maximum distance in km (default: 30)
- * @property {boolean} [showRoundTrip] - Show round-trip distance (default: true)
  * @property {string} [helpText] - Help text to display below slider
  */
 
@@ -161,11 +160,10 @@ export function DistanceSlider({
   distance,
   onChange,
   maxDistance = 30,
-  showRoundTrip = true,
-  helpText = 'Hin- und Rückfahrt zur Arbeitsstätte'
+  helpText = 'Gesamtstrecke (Hin- und Rückfahrt)'
 }) {
   const colors = TRANSPORT_COLORS[mode] || TRANSPORT_COLORS.car;
-  const displayDistance = showRoundTrip ? distance * 2 : distance;
+  const displayDistance = distance;
   
   return (
     <div className="p-3 rounded-xl bg-white/60 dark:bg-white/5 border border-border/30 space-y-3">
@@ -185,7 +183,7 @@ export function DistanceSlider({
         step="0.1"
         value={displayDistance}
         onChange={(e) => {
-          const val = showRoundTrip ? parseFloat(e.target.value) / 2 : parseFloat(e.target.value);
+          const val = parseFloat(e.target.value);
           onChange(val);
         }}
         className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
@@ -204,15 +202,14 @@ export function DistanceSliderCompact({
   mode,
   distance,
   onChange,
-  maxDistance = 30,
-  showRoundTrip = true
+  maxDistance = 30
 }) {
-  const displayDistance = showRoundTrip ? distance * 2 : distance;
+  const displayDistance = distance;
   
   return (
     <div className="space-y-2 p-3 bg-secondary/30 rounded-lg border border-border/50">
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">{TRANSPORT_LABELS[mode]} (Hin & Zurück)</span>
+        <span className="font-medium text-foreground">{TRANSPORT_LABELS[mode]} (Gesamtstrecke)</span>
         <span>{displayDistance.toFixed(1)} km</span>
       </div>
       <input 
@@ -222,7 +219,7 @@ export function DistanceSliderCompact({
         step="0.1"
         value={displayDistance}
         onChange={(e) => {
-          const val = showRoundTrip ? parseFloat(e.target.value) / 2 : parseFloat(e.target.value);
+          const val = parseFloat(e.target.value);
           onChange(val);
         }}
         className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"

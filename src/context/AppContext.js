@@ -4,6 +4,61 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 
 const AppContext = createContext();
 
+const APP_VERSION = '1.0.1';
+const DATA_VERSION_KEY = 'appDataVersion';
+const DISTANCE_MIGRATION_VERSION = '1.0.1';
+
+// ============================================
+// ARCHITECTURE CONSTRAINT & TAX SEMANTICS
+// ============================================
+/**
+ * TAX PERSPECTIVE:
+ * From a tax standpoint, what matters is the HOURS AWAY FROM HOME WHILE WORKING.
+ * The trip is the organizational unit that contains these work hours.
+ * 
+ * TWO TYPES OF TAX DEDUCTIONS (both tied to a trip):
+ * 
+ * 1. MEAL ALLOWANCES (Verpflegungspauschale)
+ *    - CALCULATED FROM: Hours away from home (departureTime → returnTime)
+ *    - Stored in: trip.mealAllowance
+ *    - Tax logic: Time away from home ≥ 8h = €14, multi-day trips = more
+ *    - User does NOT input this - it's computed from trip duration
+ * 
+ * 2. TRANSPORT ALLOWANCES (Fahrtkosten)
+ *    - CALCULATED FROM: Distance traveled OR actual ticket costs
+ *    - Stored in: trip.transportRecords[] (nested array)
+ *    - Tax logic:
+ *      • Car/Motorcycle/Bike: distance × rate (e.g., 100km × €0.30)
+ *      • Public transport: User-provided actual ticket cost
+ *    - Precomputed sum stored in: trip.sumTransportAllowances
+ * 
+ * DATA MODEL:
+ * - tripEntries: Business activity containing ALL trip data
+ *   {
+ *     id, date, endDate, departureTime, returnTime,
+ *     destination, purpose,
+ *     mealAllowance: 14.00,              // Calculated from time
+ *     transportRecords: [                // Nested transport data
+ *       { id, date, distance, allowance, vehicleType, destination },
+ *       { id, date, allowance, vehicleType: 'public_transport', ... }
+ *     ],
+ *     sumTransportAllowances: 171.00,    // Precomputed sum for performance
+ *     isMultiDay
+ *   }
+ * 
+ * NESTED STRUCTURE BENEFITS:
+ * - Direct access: trip.transportRecords (no filtering needed)
+ * - Performance: trip.sumTransportAllowances (no iteration needed)
+ * - Data integrity: Transport records can't exist without parent trip
+ * - Simpler queries: No joins needed - all trip data in one object
+ * - Cleaner code: No relatedTripId foreign key management
+ * 
+ * ARCHITECTURAL CONSTRAINT:
+ * Both meal and transport allowances can ONLY exist as part of a trip.
+ * Standalone recording is NOT allowed - they have no tax basis without
+ * the work hours context that a trip provides.
+ */
+
 // ============================================
 // MOCK DATA FOR DEVELOPMENT
 // ============================================
@@ -11,6 +66,23 @@ const ENABLE_MOCK_DATA = process.env.NODE_ENV === 'development'; // Only enabled
 
 const generateMockData = (currentYear) => {
   const mockTripEntries = [
+    // ============================================
+    // TRIP STRUCTURE NOTE (TAX DEDUCTIONS):
+    // A trip represents WORK HOURS AWAY FROM HOME, which creates two tax deductions:
+    // 
+    // 1. MEAL ALLOWANCE (stored in mealAllowance field):
+    //    - Calculated from: departureTime → returnTime duration
+    //    - Example: >8h = €14, multi-day trips = more
+    //    - User does NOT input - auto-calculated
+    // 
+    // 2. TRANSPORT ALLOWANCE (stored in transportRecords array - nested):
+    //    - Calculated from: distance × rate OR actual ticket cost
+    //    - Example: 100km car trip = 100 × €0.30 = €30.00
+    //    - Car/bike: calculated; Public transport: user provides cost
+    //    - sumTransportAllowances: Precomputed total for performance
+    // 
+    // Both are deductible ONLY because they occurred during work hours.
+    // ============================================
     // January trips
     {
       id: 1001,
@@ -20,7 +92,12 @@ const generateMockData = (currentYear) => {
       returnTime: '20:00',
       destination: 'München',
       purpose: 'Kundentermin BMW',
-      deductible: 70.0, // 2 full days + 2 travel days
+      mealAllowance: 70.0, // 2 full days + 2 travel days
+      transportRecords: [
+        { id: 2001, date: `${currentYear}-01-06`, distance: 285, allowance: 85.50, vehicleType: 'car', destination: 'München' },
+        { id: 2002, date: `${currentYear}-01-08`, distance: 285, allowance: 85.50, vehicleType: 'car', destination: 'München (Rückfahrt)' }
+      ],
+      sumTransportAllowances: 171.00,
       isMultiDay: true,
     },
     {
@@ -30,7 +107,11 @@ const generateMockData = (currentYear) => {
       returnTime: '19:30',
       destination: 'Stuttgart',
       purpose: 'Messe Besuch',
-      deductible: 14.0,
+      mealAllowance: 14.0,
+      transportRecords: [
+        { id: 2003, date: `${currentYear}-01-15`, distance: 210, allowance: 63.00, vehicleType: 'car', destination: 'Stuttgart' }
+      ],
+      sumTransportAllowances: 63.00,
       isMultiDay: false
     },
     // February trips
@@ -42,7 +123,12 @@ const generateMockData = (currentYear) => {
       returnTime: '21:00',
       destination: 'Hamburg',
       purpose: 'Workshop Team Nord',
-      deductible: 70.0,
+      mealAllowance: 70.0,
+      transportRecords: [
+        { id: 2007, date: `${currentYear}-02-03`, distance: 470, allowance: 141.00, vehicleType: 'car', destination: 'Hamburg' },
+        { id: 2008, date: `${currentYear}-02-05`, distance: 470, allowance: 141.00, vehicleType: 'car', destination: 'Hamburg (Rückfahrt)' }
+      ],
+      sumTransportAllowances: 282.00,
       isMultiDay: true,
     },
     {
@@ -52,7 +138,11 @@ const generateMockData = (currentYear) => {
       returnTime: '18:00',
       destination: 'Frankfurt',
       purpose: 'Banktermin',
-      deductible: 14.0,
+      mealAllowance: 14.0,
+      transportRecords: [
+        { id: 2009, date: `${currentYear}-02-20`, distance: 180, allowance: 54.00, vehicleType: 'car', destination: 'Frankfurt' }
+      ],
+      sumTransportAllowances: 54.00,
       isMultiDay: false
     },
     // March trips
@@ -64,7 +154,12 @@ const generateMockData = (currentYear) => {
       returnTime: '22:00',
       destination: 'Berlin',
       purpose: 'Projektstart Kunde XYZ',
-      deductible: 126.0,
+      mealAllowance: 126.0,
+      transportRecords: [
+        { id: 2010, date: `${currentYear}-03-10`, distance: 550, allowance: 165.00, vehicleType: 'car', destination: 'Berlin' },
+        { id: 2011, date: `${currentYear}-03-14`, distance: 550, allowance: 165.00, vehicleType: 'car', destination: 'Berlin (Rückfahrt)' }
+      ],
+      sumTransportAllowances: 330.00,
       isMultiDay: true,
     },
     // April trips
@@ -75,7 +170,11 @@ const generateMockData = (currentYear) => {
       returnTime: '17:30',
       destination: 'Köln',
       purpose: 'Lieferantengespräch',
-      deductible: 14.0,
+      mealAllowance: 14.0,
+      transportRecords: [
+        { id: 2012, date: `${currentYear}-04-07`, distance: 150, allowance: 45.00, vehicleType: 'car', destination: 'Köln' }
+      ],
+      sumTransportAllowances: 45.00,
       isMultiDay: false
     },
     {
@@ -86,7 +185,12 @@ const generateMockData = (currentYear) => {
       returnTime: '19:00',
       destination: 'Düsseldorf',
       purpose: 'Schulung SAP',
-      deductible: 70.0,
+      mealAllowance: 70.0,
+      transportRecords: [
+        { id: 2013, date: `${currentYear}-04-22`, distance: 220, allowance: 66.00, vehicleType: 'car', destination: 'Düsseldorf' },
+        { id: 2014, date: `${currentYear}-04-24`, distance: 220, allowance: 66.00, vehicleType: 'car', destination: 'Düsseldorf (Rückfahrt)' }
+      ],
+      sumTransportAllowances: 132.00,
       isMultiDay: true
     },
     // May trips
@@ -97,7 +201,11 @@ const generateMockData = (currentYear) => {
       returnTime: '20:00',
       destination: 'Nürnberg',
       purpose: 'Audit Qualitätsmanagement',
-      deductible: 14.0,
+      mealAllowance: 14.0,
+      transportRecords: [
+        { id: 2015, date: `${currentYear}-05-12`, distance: 165, allowance: 49.50, vehicleType: 'car', destination: 'Nürnberg' }
+      ],
+      sumTransportAllowances: 49.50,
       isMultiDay: false,
     },
     // June trips
@@ -109,7 +217,12 @@ const generateMockData = (currentYear) => {
       returnTime: '21:30',
       destination: 'Wien',
       purpose: 'Internationale Konferenz',
-      deductible: 140.0,
+      mealAllowance: 140.0,
+      transportRecords: [
+        { id: 2016, date: `${currentYear}-06-02`, distance: 420, allowance: 126.00, vehicleType: 'car', destination: 'Wien' },
+        { id: 2017, date: `${currentYear}-06-06`, distance: 420, allowance: 126.00, vehicleType: 'car', destination: 'Wien (Rückfahrt)' }
+      ],
+      sumTransportAllowances: 252.00,
       isMultiDay: true,
     },
     // July trips (Phase 1.1)
@@ -120,7 +233,11 @@ const generateMockData = (currentYear) => {
       returnTime: '18:00',
       destination: 'Essen',
       purpose: 'Technische Beratung',
-      deductible: 14.0,
+      mealAllowance: 14.0,
+      transportRecords: [
+        { id: 2036, date: `${currentYear}-07-08`, distance: 65, allowance: 19.50, vehicleType: 'car', destination: 'Essen' }
+      ],
+      sumTransportAllowances: 19.50,
       isMultiDay: false
     },
     {
@@ -131,7 +248,12 @@ const generateMockData = (currentYear) => {
       returnTime: '20:00',
       destination: 'Salzburg',
       purpose: 'Sommerseminar',
-      deductible: 70.0,
+      mealAllowance: 70.0,
+      transportRecords: [
+        { id: 2037, date: `${currentYear}-07-22`, distance: 260, allowance: 78.00, vehicleType: 'car', destination: 'Salzburg' },
+        { id: 2038, date: `${currentYear}-07-24`, distance: 260, allowance: 78.00, vehicleType: 'car', destination: 'Salzburg (Rückfahrt)' }
+      ],
+      sumTransportAllowances: 156.00,
       isMultiDay: true,
     },
     // August trips (Phase 1.1)
@@ -142,7 +264,11 @@ const generateMockData = (currentYear) => {
       returnTime: '17:30',
       destination: 'Bonn',
       purpose: 'Behördentermin',
-      deductible: 14.0,
+      mealAllowance: 14.0,
+      transportRecords: [
+        { id: 2039, date: `${currentYear}-08-05`, distance: 130, allowance: 39.00, vehicleType: 'car', destination: 'Bonn' }
+      ],
+      sumTransportAllowances: 39.00,
       isMultiDay: false
     },
     {
@@ -153,7 +279,12 @@ const generateMockData = (currentYear) => {
       returnTime: '19:30',
       destination: 'Graz',
       purpose: 'Strategiemeeting',
-      deductible: 70.0,
+      mealAllowance: 70.0,
+      transportRecords: [
+        { id: 2040, date: `${currentYear}-08-19`, distance: 340, allowance: 102.00, vehicleType: 'car', destination: 'Graz' },
+        { id: 2041, date: `${currentYear}-08-21`, distance: 340, allowance: 102.00, vehicleType: 'car', destination: 'Graz (Rückfahrt)' }
+      ],
+      sumTransportAllowances: 204.00,
       isMultiDay: true
     },
     // September trips (Phase 1.1)
@@ -164,7 +295,11 @@ const generateMockData = (currentYear) => {
       returnTime: '19:00',
       destination: 'Dresden',
       purpose: 'Herbstmesse Besuch',
-      deductible: 14.0,
+      mealAllowance: 14.0,
+      transportRecords: [
+        { id: 2024, date: `${currentYear}-09-05`, distance: 195, allowance: 58.50, vehicleType: 'car', destination: 'Dresden' }
+      ],
+      sumTransportAllowances: 58.50,
       isMultiDay: false
     },
     {
@@ -175,7 +310,12 @@ const generateMockData = (currentYear) => {
       returnTime: '20:30',
       destination: 'Hannover',
       purpose: 'Produktpräsentation',
-      deductible: 70.0,
+      mealAllowance: 70.0,
+      transportRecords: [
+        { id: 2025, date: `${currentYear}-09-18`, distance: 240, allowance: 72.00, vehicleType: 'car', destination: 'Hannover' },
+        { id: 2026, date: `${currentYear}-09-20`, distance: 240, allowance: 72.00, vehicleType: 'car', destination: 'Hannover (Rückfahrt)' }
+      ],
+      sumTransportAllowances: 144.00,
       isMultiDay: true,
     },
     // October trips (Phase 1.1)
@@ -187,7 +327,12 @@ const generateMockData = (currentYear) => {
       returnTime: '21:00',
       destination: 'Zürich',
       purpose: 'Internationale Konferenz',
-      deductible: 98.0,
+      mealAllowance: 98.0,
+      transportRecords: [
+        { id: 2027, date: `${currentYear}-10-12`, distance: 310, allowance: 93.00, vehicleType: 'car', destination: 'Zürich' },
+        { id: 2028, date: `${currentYear}-10-15`, distance: 310, allowance: 93.00, vehicleType: 'car', destination: 'Zürich (Rückfahrt)' }
+      ],
+      sumTransportAllowances: 186.00,
       isMultiDay: true
     },
     {
@@ -197,7 +342,11 @@ const generateMockData = (currentYear) => {
       returnTime: '17:00',
       destination: 'Karlsruhe',
       purpose: 'Technisches Audit',
-      deductible: 14.0,
+      mealAllowance: 14.0,
+      transportRecords: [
+        { id: 2029, date: `${currentYear}-10-25`, distance: 75, allowance: 22.50, vehicleType: 'car', destination: 'Karlsruhe' }
+      ],
+      sumTransportAllowances: 22.50,
       isMultiDay: false,
     },
     // November trips (Phase 1.1)
@@ -208,7 +357,11 @@ const generateMockData = (currentYear) => {
       returnTime: '18:00',
       destination: 'Bremen',
       purpose: 'Kundenmeeting',
-      deductible: 14.0,
+      mealAllowance: 14.0,
+      transportRecords: [
+        { id: 2030, date: `${currentYear}-11-08`, distance: 130, allowance: 39.00, vehicleType: 'car', destination: 'Bremen' }
+      ],
+      sumTransportAllowances: 39.00,
       isMultiDay: false
     },
     {
@@ -219,7 +372,12 @@ const generateMockData = (currentYear) => {
       returnTime: '20:00',
       destination: 'Dortmund',
       purpose: 'Workshop Digitalisierung',
-      deductible: 70.0,
+      mealAllowance: 70.0,
+      transportRecords: [
+        { id: 2031, date: `${currentYear}-11-19`, distance: 105, allowance: 31.50, vehicleType: 'car', destination: 'Dortmund' },
+        { id: 2032, date: `${currentYear}-11-21`, distance: 105, allowance: 31.50, vehicleType: 'car', destination: 'Dortmund (Rückfahrt)' }
+      ],
+      sumTransportAllowances: 63.00,
       isMultiDay: true
     },
     // December trips (Phase 1.1)
@@ -230,7 +388,11 @@ const generateMockData = (currentYear) => {
       returnTime: '19:30',
       destination: 'Wiesbaden',
       purpose: 'Jahresplanung Meeting',
-      deductible: 14.0,
+      mealAllowance: 14.0,
+      transportRecords: [
+        { id: 2033, date: `${currentYear}-12-05`, distance: 88, allowance: 26.40, vehicleType: 'car', destination: 'Wiesbaden' }
+      ],
+      sumTransportAllowances: 26.40,
       isMultiDay: false
     },
     {
@@ -241,65 +403,14 @@ const generateMockData = (currentYear) => {
       returnTime: '22:00',
       destination: 'Wien',
       purpose: 'Jahresabschluss-Workshop',
-      deductible: 98.0,
+      mealAllowance: 98.0,
+      transportRecords: [
+        { id: 2034, date: `${currentYear}-12-15`, distance: 420, allowance: 126.00, vehicleType: 'car', destination: 'Wien' },
+        { id: 2035, date: `${currentYear}-12-18`, distance: 420, allowance: 126.00, vehicleType: 'car', destination: 'Wien (Rückfahrt)' }
+      ],
+      sumTransportAllowances: 252.00,
       isMultiDay: true,
     }
-  ];
-
-  const mockMileageEntries = [
-    // January - Car
-    { id: 2001, date: `${currentYear}-01-06`, distance: 285, allowance: 85.50, vehicleType: 'car', relatedTripId: 1001, destination: 'München' },
-    { id: 2002, date: `${currentYear}-01-08`, distance: 285, allowance: 85.50, vehicleType: 'car', relatedTripId: 1001, destination: 'München (Rückfahrt)' },
-    { id: 2003, date: `${currentYear}-01-15`, distance: 210, allowance: 63.00, vehicleType: 'car', relatedTripId: 1002, destination: 'Stuttgart' },
-    { id: 2004, date: `${currentYear}-01-13`, distance: 95, allowance: 28.50, vehicleType: 'car', destination: 'Mannheim' },
-    { id: 2005, date: `${currentYear}-01-17`, distance: 320, allowance: 96.00, vehicleType: 'car', destination: 'Leipzig' },
-    { id: 2006, date: `${currentYear}-01-19`, distance: 320, allowance: 96.00, vehicleType: 'car', destination: 'Leipzig (Rückfahrt)' },
-    // February - Car
-    { id: 2007, date: `${currentYear}-02-03`, distance: 470, allowance: 141.00, vehicleType: 'car', relatedTripId: 1003, destination: 'Hamburg' },
-    { id: 2008, date: `${currentYear}-02-05`, distance: 470, allowance: 141.00, vehicleType: 'car', relatedTripId: 1003, destination: 'Hamburg (Rückfahrt)' },
-    { id: 2009, date: `${currentYear}-02-20`, distance: 180, allowance: 54.00, vehicleType: 'car', relatedTripId: 1004, destination: 'Frankfurt' },
-    // March - Car
-    { id: 2010, date: `${currentYear}-03-10`, distance: 550, allowance: 165.00, vehicleType: 'car', relatedTripId: 1005, destination: 'Berlin' },
-    { id: 2011, date: `${currentYear}-03-14`, distance: 550, allowance: 165.00, vehicleType: 'car', relatedTripId: 1005, destination: 'Berlin (Rückfahrt)' },
-    // April - Car & Bike
-    { id: 2012, date: `${currentYear}-04-07`, distance: 150, allowance: 45.00, vehicleType: 'car', relatedTripId: 1006, destination: 'Köln' },
-    { id: 2013, date: `${currentYear}-04-22`, distance: 220, allowance: 66.00, vehicleType: 'car', relatedTripId: 1007, destination: 'Düsseldorf' },
-    { id: 2014, date: `${currentYear}-04-24`, distance: 220, allowance: 66.00, vehicleType: 'car', relatedTripId: 1007, destination: 'Düsseldorf (Rückfahrt)' },
-    { id: 2021, date: `${currentYear}-04-15`, distance: 12, allowance: 0.60, vehicleType: 'bike', destination: 'Lokaler Kunde - Stadtmitte' },
-    // May - Car, Motorcycle, Bike
-    { id: 2015, date: `${currentYear}-05-12`, distance: 165, allowance: 49.50, vehicleType: 'car', relatedTripId: 1008, destination: 'Nürnberg' },
-    { id: 2018, date: `${currentYear}-05-20`, distance: 45, allowance: 9.00, vehicleType: 'motorcycle', destination: 'Heidelberg - Kurzstrecke' },
-    { id: 2022, date: `${currentYear}-05-03`, distance: 8, allowance: 0.40, vehicleType: 'bike', destination: 'Stadtbüro - Meeting' },
-    // June - Car, Motorcycle
-    { id: 2016, date: `${currentYear}-06-02`, distance: 420, allowance: 126.00, vehicleType: 'car', relatedTripId: 1009, destination: 'Wien' },
-    { id: 2017, date: `${currentYear}-06-06`, distance: 420, allowance: 126.00, vehicleType: 'car', relatedTripId: 1009, destination: 'Wien (Rückfahrt)' },
-    { id: 2019, date: `${currentYear}-06-10`, distance: 85, allowance: 17.00, vehicleType: 'motorcycle', destination: 'Karlsruhe - Kundentermin' },
-    // July - Car
-    { id: 2036, date: `${currentYear}-07-08`, distance: 65, allowance: 19.50, vehicleType: 'car', relatedTripId: 1010, destination: 'Essen' },
-    { id: 2037, date: `${currentYear}-07-22`, distance: 260, allowance: 78.00, vehicleType: 'car', relatedTripId: 1011, destination: 'Salzburg' },
-    { id: 2038, date: `${currentYear}-07-24`, distance: 260, allowance: 78.00, vehicleType: 'car', relatedTripId: 1011, destination: 'Salzburg (Rückfahrt)' },
-    // August - Car, Motorcycle
-    { id: 2039, date: `${currentYear}-08-05`, distance: 130, allowance: 39.00, vehicleType: 'car', relatedTripId: 1012, destination: 'Bonn' },
-    { id: 2040, date: `${currentYear}-08-19`, distance: 340, allowance: 102.00, vehicleType: 'car', relatedTripId: 1013, destination: 'Graz' },
-    { id: 2041, date: `${currentYear}-08-21`, distance: 340, allowance: 102.00, vehicleType: 'car', relatedTripId: 1013, destination: 'Graz (Rückfahrt)' },
-    { id: 2020, date: `${currentYear}-08-15`, distance: 120, allowance: 24.00, vehicleType: 'motorcycle', destination: 'Freiburg - Workshop' },
-    // September - Car, Bike
-    { id: 2024, date: `${currentYear}-09-05`, distance: 195, allowance: 58.50, vehicleType: 'car', relatedTripId: 1014, destination: 'Dresden' },
-    { id: 2025, date: `${currentYear}-09-18`, distance: 240, allowance: 72.00, vehicleType: 'car', relatedTripId: 1015, destination: 'Hannover' },
-    { id: 2026, date: `${currentYear}-09-20`, distance: 240, allowance: 72.00, vehicleType: 'car', relatedTripId: 1015, destination: 'Hannover (Rückfahrt)' },
-    { id: 2023, date: `${currentYear}-09-20`, distance: 15, allowance: 0.75, vehicleType: 'bike', destination: 'Nahversorgung - Büromaterial' },
-    // October - Car
-    { id: 2027, date: `${currentYear}-10-12`, distance: 310, allowance: 93.00, vehicleType: 'car', relatedTripId: 1016, destination: 'Zürich' },
-    { id: 2028, date: `${currentYear}-10-15`, distance: 310, allowance: 93.00, vehicleType: 'car', relatedTripId: 1016, destination: 'Zürich (Rückfahrt)' },
-    { id: 2029, date: `${currentYear}-10-25`, distance: 75, allowance: 22.50, vehicleType: 'car', relatedTripId: 1017, destination: 'Karlsruhe' },
-    // November - Car
-    { id: 2030, date: `${currentYear}-11-08`, distance: 130, allowance: 39.00, vehicleType: 'car', relatedTripId: 1018, destination: 'Bremen' },
-    { id: 2031, date: `${currentYear}-11-19`, distance: 105, allowance: 31.50, vehicleType: 'car', relatedTripId: 1019, destination: 'Dortmund' },
-    { id: 2032, date: `${currentYear}-11-21`, distance: 105, allowance: 31.50, vehicleType: 'car', relatedTripId: 1019, destination: 'Dortmund (Rückfahrt)' },
-    // December - Car
-    { id: 2033, date: `${currentYear}-12-05`, distance: 88, allowance: 26.40, vehicleType: 'car', relatedTripId: 1020, destination: 'Wiesbaden' },
-    { id: 2034, date: `${currentYear}-12-15`, distance: 420, allowance: 126.00, vehicleType: 'car', relatedTripId: 1021, destination: 'Wien' },
-    { id: 2035, date: `${currentYear}-12-18`, distance: 420, allowance: 126.00, vehicleType: 'car', relatedTripId: 1021, destination: 'Wien (Rückfahrt)' }
   ];
 
   const mockMonthlyExpenses = [
@@ -349,14 +460,13 @@ const generateMockData = (currentYear) => {
 
   return {
     tripEntries: mockTripEntries,
-    mileageEntries: mockMileageEntries,
     monthlyEmployerExpenses: mockMonthlyExpenses,
     equipmentEntries: mockEquipmentEntries,
     expenseEntries: mockExpenseEntries
   };
 };
 
-// Helper to delete receipt files
+// Helper to delete receipt files (used for transport record receipts nested in trips)
 const deleteReceiptFiles = async (receiptFileName, dateStr) => {
   if (!receiptFileName) return;
 
@@ -375,9 +485,102 @@ const deleteReceiptFiles = async (receiptFileName, dateStr) => {
   }
 };
 
-export function AppProvider({ children }) {
+// Helper to calculate sum of transport allowances from nested records
+const calculateTransportSum = (transportRecords = []) => {
+  return transportRecords.reduce((sum, record) => sum + (record.allowance || 0), 0);
+};
+
+const parseVersion = (version = '0.0.0') => version.split('.').map(part => parseInt(part, 10) || 0);
+
+const isVersionLessThan = (left, right) => {
+  const leftParts = parseVersion(left);
+  const rightParts = parseVersion(right);
+  for (let i = 0; i < Math.max(leftParts.length, rightParts.length); i += 1) {
+    const l = leftParts[i] || 0;
+    const r = rightParts[i] || 0;
+    if (l < r) return true;
+    if (l > r) return false;
+  }
+  return false;
+};
+
+const migrateCommuteDistances = (commute) => {
+  if (!commute) return commute;
+  const next = { ...commute };
+  ['car', 'motorcycle', 'bike'].forEach((mode) => {
+    const rawDistance = parseFloat(next[mode]?.distance);
+    if (Number.isFinite(rawDistance) && rawDistance > 0) {
+      next[mode] = {
+        ...next[mode],
+        distance: rawDistance * 2
+      };
+    }
+  });
+  return next;
+};
+
+const migrateTripCommuteDistances = (trips = []) => {
+  return trips.map((trip) => ({
+    ...trip,
+    commute: migrateCommuteDistances(trip.commute)
+  }));
+};
+
+const migrateTripTransportDistances = (trips = [], taxRates = {}) => {
+  const rates = {
+    car: taxRates.mileageRateCar ?? taxRates.mileageRate ?? 0.30,
+    motorcycle: taxRates.mileageRateMotorcycle ?? 0.20,
+    bike: taxRates.mileageRateBike ?? 0.05
+  };
+
+  return trips.map((trip) => {
+    const nextRecords = (trip.transportRecords || []).map((record) => {
+      if (!rates[record.vehicleType]) return record;
+
+      const baseDistance = Number.isFinite(record.distance) ? record.distance : 0;
+      const baseTotalKm = Number.isFinite(record.totalKm) ? record.totalKm : baseDistance;
+      const nextDistance = baseDistance * 2;
+      const nextTotalKm = baseTotalKm * 2;
+      const allowance = parseFloat((nextDistance * rates[record.vehicleType]).toFixed(2));
+
+      return {
+        ...record,
+        distance: nextDistance,
+        totalKm: nextTotalKm,
+        allowance
+      };
+    });
+
+    return {
+      ...trip,
+      transportRecords: nextRecords,
+      sumTransportAllowances: calculateTransportSum(nextRecords)
+    };
+  });
+};
+
+const applyDistanceMigrationIfNeeded = ({ trips, defaultCommute, settings }, dataVersion, taxRates) => {
+  if (!isVersionLessThan(dataVersion, DISTANCE_MIGRATION_VERSION)) {
+    return { trips, defaultCommute, settings };
+  }
+
+  const updatedCommuteTrips = migrateTripCommuteDistances(trips || []);
+  const updatedTrips = migrateTripTransportDistances(updatedCommuteTrips, taxRates);
+
+  return {
+    trips: updatedTrips,
+    defaultCommute: migrateCommuteDistances(defaultCommute),
+    settings: settings
+      ? {
+          ...settings,
+          defaultCommute: migrateCommuteDistances(settings.defaultCommute)
+        }
+      : settings
+  };
+};
+
+export function AppProvider({ children}) {
   const [tripEntries, setTripEntries] = useState([]);
-  const [mileageEntries, setMileageEntries] = useState([]);
   const [equipmentEntries, setEquipmentEntries] = useState([]);
   const [expenseEntries, setExpenseEntries] = useState([]);
   const [monthlyEmployerExpenses, setMonthlyEmployerExpenses] = useState([]);
@@ -400,51 +603,53 @@ export function AppProvider({ children }) {
 
   // Load from local storage on mount
   useEffect(() => {
+    const storedVersion = localStorage.getItem(DATA_VERSION_KEY) || '1.0.0';
     const storedTrips = localStorage.getItem('mealEntries');
-    const storedMileage = localStorage.getItem('mileageEntries');
     const storedEquipment = localStorage.getItem('equipmentEntries');
     const storedExpenses = localStorage.getItem('expenseEntries');
     const storedMonthlyExpenses = localStorage.getItem('monthlyEmployerExpenses');
     const storedDefaultCommute = localStorage.getItem('defaultCommute');
     const storedTaxRates = localStorage.getItem('taxRates');
-    const storedYear = localStorage.getItem('selectedYear');
 
-    // Check if we have existing data
-    const hasExistingData = storedTrips && JSON.parse(storedTrips).length > 0;
+    let initialTrips = storedTrips ? JSON.parse(storedTrips) : [];
+    let initialMonthlyExpenses = storedMonthlyExpenses ? JSON.parse(storedMonthlyExpenses) : [];
+    let initialEquipmentEntries = storedEquipment ? JSON.parse(storedEquipment) : [];
+    let initialExpenseEntries = storedExpenses ? JSON.parse(storedExpenses) : [];
+    let initialDefaultCommute = storedDefaultCommute ? JSON.parse(storedDefaultCommute) : defaultCommute;
+    let initialTaxRates = taxRates;
 
-    if (hasExistingData) {
-      // Load existing data from localStorage
-      if (storedTrips) setTripEntries(JSON.parse(storedTrips));
-      if (storedMileage) setMileageEntries(JSON.parse(storedMileage));
-      if (storedEquipment) setEquipmentEntries(JSON.parse(storedEquipment));
-      if (storedExpenses) setExpenseEntries(JSON.parse(storedExpenses));
-      if (storedMonthlyExpenses) setMonthlyEmployerExpenses(JSON.parse(storedMonthlyExpenses));
-    } else if (ENABLE_MOCK_DATA) {
-      // Load mock data for development
-      const mockData = generateMockData(new Date().getFullYear());
-      setTripEntries(mockData.tripEntries);
-      setMileageEntries(mockData.mileageEntries);
-      setMonthlyEmployerExpenses(mockData.monthlyEmployerExpenses);
-      setEquipmentEntries(mockData.equipmentEntries);
-      setExpenseEntries(mockData.expenseEntries);
-    }
-
-    if (storedDefaultCommute) setDefaultCommute(JSON.parse(storedDefaultCommute));
     if (storedTaxRates) {
       const parsedRates = JSON.parse(storedTaxRates);
-      setTaxRates(prev => ({ ...prev, ...parsedRates }));
+      initialTaxRates = { ...initialTaxRates, ...parsedRates };
     }
-    // if (storedYear) setSelectedYear(JSON.parse(storedYear)); // Always start with current year
+
+    if (!storedTrips && ENABLE_MOCK_DATA) {
+      const mockData = generateMockData(new Date().getFullYear());
+      initialTrips = mockData.tripEntries;
+      initialMonthlyExpenses = mockData.monthlyEmployerExpenses;
+      initialEquipmentEntries = mockData.equipmentEntries;
+      initialExpenseEntries = mockData.expenseEntries;
+    }
+
+    const migrated = applyDistanceMigrationIfNeeded(
+      { trips: initialTrips, defaultCommute: initialDefaultCommute },
+      storedVersion,
+      initialTaxRates
+    );
+
+    setTripEntries(migrated.trips || []);
+    setMonthlyEmployerExpenses(initialMonthlyExpenses);
+    setEquipmentEntries(initialEquipmentEntries);
+    setExpenseEntries(initialExpenseEntries);
+    setDefaultCommute(migrated.defaultCommute || initialDefaultCommute);
+    setTaxRates(initialTaxRates);
+    localStorage.setItem(DATA_VERSION_KEY, APP_VERSION);
   }, []);
 
   // Save to local storage on change
   useEffect(() => {
     localStorage.setItem('mealEntries', JSON.stringify(tripEntries));
   }, [tripEntries]);
-
-  useEffect(() => {
-    localStorage.setItem('mileageEntries', JSON.stringify(mileageEntries));
-  }, [mileageEntries]);
 
   useEffect(() => {
     localStorage.setItem('equipmentEntries', JSON.stringify(equipmentEntries));
@@ -471,30 +676,45 @@ export function AppProvider({ children }) {
   }, [selectedYear]);
 
   const addTripEntry = (entry) => {
-    const newEntry = { ...entry, id: entry.id || Date.now() };
+    // Ensure transportRecords and sumTransportAllowances exist
+    const newEntry = { 
+      ...entry, 
+      id: entry.id || Date.now(),
+      transportRecords: entry.transportRecords || [],
+      sumTransportAllowances: entry.sumTransportAllowances || 0
+    };
     setTripEntries(prev => [...prev, newEntry]);
   };
 
   const deleteTripEntry = (id) => {
-    setTripEntries(prev => prev.filter(e => e.id !== id));
-  };
-
-  const updateTripEntry = (id, updatedEntry) => {
-    setTripEntries(prev => prev.map(entry => entry.id === id ? { ...entry, ...updatedEntry } : entry));
-  };
-
-  const addMileageEntry = (entry) => {
-    setMileageEntries(prev => [...prev, { ...entry, id: Date.now() + Math.random() }]);
-  };
-
-  const deleteMileageEntry = (id) => {
-    setMileageEntries(prev => {
-      const entry = prev.find(e => e.id === id);
-      if (entry && entry.receiptFileName) {
-        deleteReceiptFiles(entry.receiptFileName, entry.date);
+    // With nested structure, deleting trip automatically deletes transport records
+    // No need for cascade deletion logic
+    setTripEntries(prev => {
+      const trip = prev.find(t => t.id === id);
+      // Delete receipt files from transport records
+      if (trip?.transportRecords) {
+        trip.transportRecords.forEach(record => {
+          if (record.receiptFileName) {
+            deleteReceiptFiles(record.receiptFileName, record.date);
+          }
+        });
       }
       return prev.filter(e => e.id !== id);
     });
+  };
+
+  const updateTripEntry = (id, updatedEntry) => {
+    setTripEntries(prev => prev.map(entry => {
+      if (entry.id === id) {
+        const updated = { ...entry, ...updatedEntry };
+        // Recalculate sum if transportRecords changed
+        if (updatedEntry.transportRecords) {
+          updated.sumTransportAllowances = calculateTransportSum(updatedEntry.transportRecords);
+        }
+        return updated;
+      }
+      return entry;
+    }));
   };
 
   const getMileageRate = (vehicleType) => {
@@ -571,30 +791,45 @@ export function AppProvider({ children }) {
     if (!data) return false;
     
     try {
-      // Support v2.0.0 format (new structure with correct naming)
-      if (data.trips) setTripEntries(data.trips);
-      if (data.mileage) setMileageEntries(data.mileage);
-      if (data.equipment) setEquipmentEntries(data.equipment);
-      if (data.expenses) setExpenseEntries(data.expenses);
-      
-      // Handle settings object (v2.0.0 format)
-      if (data.settings) {
-        if (data.settings.monthlyEmployerExpenses) setMonthlyEmployerExpenses(data.settings.monthlyEmployerExpenses);
-        if (data.settings.defaultCommute) setDefaultCommute(data.settings.defaultCommute);
-        if (data.settings.taxRates) setTaxRates(data.settings.taxRates);
-        if (data.settings.selectedYear) setSelectedYear(data.settings.selectedYear);
+      const sourceVersion = data?.backup?.version || data?.version || '1.0.0';
+      const payload = data?.data ? data.data : data;
+
+      const importTaxRates =
+        payload?.settings?.taxRates ||
+        payload?.taxRates ||
+        taxRates;
+
+      const migrationInput = {
+        trips: payload?.trips || [],
+        defaultCommute: payload?.defaultCommute || payload?.settings?.defaultCommute,
+        settings: payload?.settings
+      };
+
+      const migrated = applyDistanceMigrationIfNeeded(migrationInput, sourceVersion, importTaxRates);
+
+      if (payload.trips) {
+        setTripEntries(migrated.trips || []);
       }
-      
-      // Legacy support for old v1 format (backwards compatibility)
-      // This handles old backups that might still exist
-      if (data.mealEntries) setTripEntries(data.mealEntries);
-      if (data.mileageEntries) setMileageEntries(data.mileageEntries);
-      if (data.equipmentEntries) setEquipmentEntries(data.equipmentEntries);
-      if (data.expenseEntries) setExpenseEntries(data.expenseEntries);
-      if (data.monthlyEmployerExpenses) setMonthlyEmployerExpenses(data.monthlyEmployerExpenses);
-      if (data.defaultCommute) setDefaultCommute(data.defaultCommute);
-      if (data.taxRates) setTaxRates(data.taxRates);
-      if (data.selectedYear) setSelectedYear(data.selectedYear);
+
+      if (payload.equipment) setEquipmentEntries(payload.equipment);
+      if (payload.equipmentEntries) setEquipmentEntries(payload.equipmentEntries);
+      if (payload.expenses) setExpenseEntries(payload.expenses);
+      if (payload.expenseEntries) setExpenseEntries(payload.expenseEntries);
+      if (payload.monthlyEmployerExpenses) setMonthlyEmployerExpenses(payload.monthlyEmployerExpenses);
+      if (payload.defaultCommute || payload.settings?.defaultCommute) {
+        setDefaultCommute(migrated.defaultCommute || payload.defaultCommute || payload.settings?.defaultCommute);
+      }
+      if (payload.taxRates) setTaxRates(payload.taxRates);
+      if (payload.selectedYear) setSelectedYear(payload.selectedYear);
+
+      if (payload.settings) {
+        if (payload.settings.monthlyEmployerExpenses) setMonthlyEmployerExpenses(payload.settings.monthlyEmployerExpenses);
+        if (payload.settings.defaultCommute) setDefaultCommute(migrated.defaultCommute || payload.settings.defaultCommute);
+        if (payload.settings.taxRates) setTaxRates(payload.settings.taxRates);
+        if (payload.settings.selectedYear) setSelectedYear(payload.settings.selectedYear);
+      }
+
+      localStorage.setItem(DATA_VERSION_KEY, APP_VERSION);
       
       return true;
     } catch (e) {
@@ -606,7 +841,6 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       tripEntries, addTripEntry, deleteTripEntry, updateTripEntry,
-      mileageEntries, addMileageEntry, deleteMileageEntry,
       equipmentEntries, addEquipmentEntry, deleteEquipmentEntry, updateEquipmentEntry,
       expenseEntries, addExpenseEntry, deleteExpenseEntry,
       monthlyEmployerExpenses, addMonthlyEmployerExpense, updateMonthlyEmployerExpense, deleteMonthlyEmployerExpense, getSpesenForYear,
@@ -614,6 +848,8 @@ export function AppProvider({ children }) {
       taxRates, setTaxRates, getMileageRate,
       selectedYear, setSelectedYear,
       importData,
+      // Helper for calculating transport sum
+      calculateTransportSum,
       // Computed: years with data + current year
       getAvailableYears: () => {
         const currentYear = new Date().getFullYear();
@@ -623,11 +859,12 @@ export function AppProvider({ children }) {
         tripEntries.forEach(entry => {
           if (entry.date) yearsSet.add(new Date(entry.date).getFullYear());
           if (entry.endDate) yearsSet.add(new Date(entry.endDate).getFullYear());
-        });
-        
-        // Extract years from mileage entries
-        mileageEntries.forEach(entry => {
-          if (entry.date) yearsSet.add(new Date(entry.date).getFullYear());
+          // Extract years from nested transport records
+          if (entry.transportRecords) {
+            entry.transportRecords.forEach(record => {
+              if (record.date) yearsSet.add(new Date(record.date).getFullYear());
+            });
+          }
         });
         
         // Extract years from expense entries

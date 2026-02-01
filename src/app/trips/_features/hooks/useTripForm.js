@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
-import { calculateAllowance } from '../utils/tripCalculations';
+import { calculateMealAllowance } from '../utils/tripCalculations';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { validateFile } from '@/utils/fileValidation';
@@ -22,13 +22,12 @@ export const useTripForm = () => {
   const { 
     tripEntries,
     addTripEntry, 
-    addMileageEntry, 
+    updateTripEntry,
     deleteTripEntry,
-    deleteMileageEntry,
-    mileageEntries,
     taxRates, 
     getMileageRate, 
-    defaultCommute 
+    defaultCommute,
+    calculateTransportSum
   } = useAppContext();
 
   const [formData, setFormData] = useState({
@@ -366,8 +365,8 @@ export const useTripForm = () => {
 
       // Validation: Minimum 8 hours duration for allowance eligibility (only for completed trips)
       let duration = null;
-      let rate = 0;
-      let deductible = 0;
+      let grossMealAllowance = 0;
+      let netMealAllowance = 0;
       let ticketCost = null;
 
       if (!isOngoing) {
@@ -376,13 +375,13 @@ export const useTripForm = () => {
         const durationInHours = (tripEnd - tripStart) / (1000 * 60 * 60);
         if (durationInHours < 8) {
           duration = durationInHours;
-          rate = 0;
-          deductible = 0;
+          grossMealAllowance = 0;
+          netMealAllowance = 0;
         } else {
-          const allowance = calculateAllowance(formData.date, startTime, finalEndDate, endTime, taxRates);
-          duration = allowance.duration;
-          rate = allowance.rate;
-          deductible = Math.max(0, rate - parseFloat(formData.employerExpenses));
+          const result = calculateMealAllowance(formData.date, startTime, finalEndDate, endTime, taxRates);
+          duration = result.duration;
+          grossMealAllowance = result.mealAllowance;
+          netMealAllowance = Math.max(0, grossMealAllowance - parseFloat(formData.employerExpenses));
         }
       }
 
@@ -404,26 +403,14 @@ export const useTripForm = () => {
 
       const sanitizedCommute = sanitizeCommute(formData.commute);
       const tripId = editingId || Date.now();
+      
+      // Build transportRecords array for this trip
+      const transportRecords = [];
 
-    // If editing: remove existing trip + related mileage entries first
+    // If editing: remove existing trip first
     if (editingId) {
       deleteTripEntry(editingId);
-      mileageEntries
-        .filter(m => m.relatedTripId === editingId || m.date === formData.date || m.date === formData.endDate)
-        .forEach(m => deleteMileageEntry(m.id));
     }
-
-    addTripEntry({
-      ...formData,
-      id: tripId,
-      endDate: isOngoing ? '' : finalEndDate,
-      endTime: isOngoing ? '' : formData.endTime,
-      duration,
-      rate,
-      deductible: parseFloat(deductible.toFixed(2)),
-      isOngoing,
-      commute: sanitizedCommute
-    });
 
     // Auto-add station trips for active modes (only for completed trips)
     if (!isOngoing && autoAddStationTrips) {
@@ -434,32 +421,29 @@ export const useTripForm = () => {
           const dist = sanitizedCommute[mode].distance;
           if (dist > 0) {
             const ratePerKm = getMileageRate(mode);
-            const allowance = parseFloat((dist * ratePerKm).toFixed(2));
+            const perRecordDistance = dist / 2;
+            const allowance = parseFloat((perRecordDistance * ratePerKm).toFixed(2));
             
             // Trip to station (Start Date)
-            addMileageEntry({
+            transportRecords.push({
+              id: Date.now() + transportRecords.length,
               date: formData.date,
-              startLocation: 'Zuhause',
-              endLocation: 'Bahnhof',
-              distance: dist,
-              totalKm: dist,
+              distance: perRecordDistance,
+              totalKm: perRecordDistance,
               allowance: allowance,
               vehicleType: mode,
-              purpose: 'Fahrt zum Bahnhof (Dienstreise Beginn)',
-              relatedTripId: tripId
+              destination: 'Bahnhof'
             });
 
             // Trip from station (End Date)
-            addMileageEntry({
+            transportRecords.push({
+              id: Date.now() + transportRecords.length + 1,
               date: formData.endDate || formData.date,
-              startLocation: 'Bahnhof',
-              endLocation: 'Zuhause',
-              distance: dist,
-              totalKm: dist,
+              distance: perRecordDistance,
+              totalKm: perRecordDistance,
               allowance: allowance,
               vehicleType: mode,
-              purpose: 'Fahrt vom Bahnhof (Dienstreise Ende)',
-              relatedTripId: tripId
+              destination: 'Bahnhof (Rückfahrt)'
             });
           }
         }
@@ -474,20 +458,34 @@ export const useTripForm = () => {
           receiptFileName = await savePublicTransportReceiptFinal(tripId, formData.date);
         }
 
-        addMileageEntry({
+        transportRecords.push({
+          id: Date.now() + transportRecords.length + 2,
           date: formData.date,
-          startLocation: 'Start',
-          endLocation: 'Ziel',
           distance: 0,
           totalKm: 0,
           allowance: ticketCost,
           vehicleType: 'public_transport',
-          purpose: 'Fahrtkosten (Tickets/Öffis)',
-          relatedTripId: tripId,
+          destination: 'Öffentliche Verkehrsmittel',
           receiptFileName
         });
       }
     }
+
+    // Calculate sum of transport allowances
+    const sumTransportAllowances = calculateTransportSum(transportRecords);
+
+    addTripEntry({
+      ...formData,
+      id: tripId,
+      endDate: isOngoing ? '' : finalEndDate,
+      endTime: isOngoing ? '' : formData.endTime,
+      duration,
+      mealAllowance: parseFloat(netMealAllowance.toFixed(2)),
+      isOngoing,
+      commute: sanitizedCommute,
+      transportRecords,
+      sumTransportAllowances
+    });
 
     // Reset form
     setFormData({
@@ -526,9 +524,9 @@ export const useTripForm = () => {
       commute: entry.commute || defaultCommute || DEFAULT_COMMUTE
     };
     
-    // Restore receipt if exists
-    const relatedMileage = mileageEntries.filter(m => m.relatedTripId === entry.id);
-    const transportEntry = relatedMileage.find(m => m.vehicleType === 'public_transport' && m.receiptFileName);
+    // Restore receipt if exists from nested transportRecords
+    const transportRecords = entry.transportRecords || [];
+    const transportEntry = transportRecords.find(t => t.vehicleType === 'public_transport' && t.receiptFileName);
     
     let loadedReceipt = null;
     let loadedPath = null;
@@ -536,7 +534,7 @@ export const useTripForm = () => {
 
     console.log('[useTripForm] startEdit - checking for receipt:', {
       tripId: entry.id,
-      relatedMileageCount: relatedMileage.length,
+      transportRecordsCount: transportRecords.length,
       hasTransportEntry: !!transportEntry,
       receiptFileName: transportEntry?.receiptFileName
     });
