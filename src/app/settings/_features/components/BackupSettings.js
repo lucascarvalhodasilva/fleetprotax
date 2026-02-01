@@ -56,7 +56,38 @@ export default function BackupSettings() {
       if (!Capacitor.isNativePlatform()) {
         // Web-Fallback: ZIP erzeugen und Download/Save-Dialog anbieten
         const zip = new JSZip();
-        const blob = await BackupService.createBackupBlob(backupData, zip);
+        
+        // Add backup.json
+        zip.file('backup.json', JSON.stringify(backupData, null, 2));
+        
+        // Add receipts from filesystem (if available on web)
+        try {
+          const dir = await Filesystem.readdir({
+            path: 'receipts',
+            directory: Directory.Documents
+          });
+          const files = dir.files || dir;
+          if (files && files.length > 0) {
+            for (const f of files) {
+              const name = f.name || f;
+              if (!name) continue;
+              try {
+                const file = await Filesystem.readFile({
+                  path: `receipts/${name}`,
+                  directory: Directory.Documents
+                });
+                zip.file(`receipts/${name}`, file.data, { base64: true });
+              } catch (readErr) {
+                console.warn(`Receipt ${name} could not be added to backup:`, readErr);
+              }
+            }
+          }
+        } catch (dirErr) {
+          console.warn('Could not read receipts directory:', dirErr);
+        }
+        
+        // Generate ZIP blob
+        const blob = await zip.generateAsync({ type: 'blob' });
         const fileName = BackupService.generateFileName();
 
         if (window.showSaveFilePicker) {
