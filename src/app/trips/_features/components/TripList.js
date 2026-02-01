@@ -140,7 +140,7 @@ export default function TripList({
     const publicTransportSum = publicTransportEntries.reduce((sum, m) => sum + (m.allowance || 0), 0);
     
     const mileageSum = amountTo + amountFrom + publicTransportSum;
-    const totalDeductible = (entry.deductible || 0) + mileageSum;
+    const totalMealAllowance = (entry.mealAllowance || 0) + mileageSum;
     
     // Check if this entry has a receipt
     const hasReceipt = publicTransportEntries.some(m => m.receiptFileName);
@@ -203,13 +203,13 @@ export default function TripList({
             {/* Amount */}
             <div className="flex flex-col items-end gap-1 shrink-0">
               <span className={`text-base font-bold ${isOngoing ? 'text-amber-600 dark:text-amber-300' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {isOngoing ? 'Offen' : `+${totalDeductible.toFixed(2)} €`}
+                {isOngoing ? 'Offen' : `+${totalMealAllowance.toFixed(2)} €`}
               </span>
               
               <div className="flex items-center gap-1">
-                {(entry.deductible || 0) > 0 && !isOngoing && (
+                {(entry.mealAllowance || 0) > 0 && !isOngoing && (
                   <span className="text-[9px] text-muted-foreground">
-                    V: {(entry.deductible || 0).toFixed(0)}€
+                    V: {(entry.mealAllowance || 0).toFixed(0)}€
                   </span>
                 )}
                 {mileageSum > 0 && !isOngoing && (

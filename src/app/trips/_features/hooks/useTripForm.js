@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
-import { calculateAllowance } from '../utils/tripCalculations';
+import { calculateMealAllowance } from '../utils/tripCalculations';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { validateFile } from '@/utils/fileValidation';
@@ -366,8 +366,8 @@ export const useTripForm = () => {
 
       // Validation: Minimum 8 hours duration for allowance eligibility (only for completed trips)
       let duration = null;
-      let rate = 0;
-      let deductible = 0;
+      let grossMealAllowance = 0;
+      let netMealAllowance = 0;
       let ticketCost = null;
 
       if (!isOngoing) {
@@ -376,13 +376,13 @@ export const useTripForm = () => {
         const durationInHours = (tripEnd - tripStart) / (1000 * 60 * 60);
         if (durationInHours < 8) {
           duration = durationInHours;
-          rate = 0;
-          deductible = 0;
+          grossMealAllowance = 0;
+          netMealAllowance = 0;
         } else {
-          const allowance = calculateAllowance(formData.date, startTime, finalEndDate, endTime, taxRates);
-          duration = allowance.duration;
-          rate = allowance.rate;
-          deductible = Math.max(0, rate - parseFloat(formData.employerExpenses));
+          const result = calculateMealAllowance(formData.date, startTime, finalEndDate, endTime, taxRates);
+          duration = result.duration;
+          grossMealAllowance = result.mealAllowance;
+          netMealAllowance = Math.max(0, grossMealAllowance - parseFloat(formData.employerExpenses));
         }
       }
 
@@ -419,8 +419,7 @@ export const useTripForm = () => {
       endDate: isOngoing ? '' : finalEndDate,
       endTime: isOngoing ? '' : formData.endTime,
       duration,
-      rate,
-      deductible: parseFloat(deductible.toFixed(2)),
+      mealAllowance: parseFloat(netMealAllowance.toFixed(2)),
       isOngoing,
       commute: sanitizedCommute
     });

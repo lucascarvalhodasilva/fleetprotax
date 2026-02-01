@@ -20,7 +20,7 @@ const generateMockData = (currentYear) => {
       returnTime: '20:00',
       destination: 'München',
       purpose: 'Kundentermin BMW',
-      deductible: 70.0, // 2 full days + 2 travel days
+      mealAllowance: 70.0, // 2 full days + 2 travel days
       isMultiDay: true,
     },
     {
@@ -30,7 +30,7 @@ const generateMockData = (currentYear) => {
       returnTime: '19:30',
       destination: 'Stuttgart',
       purpose: 'Messe Besuch',
-      deductible: 14.0,
+      mealAllowance: 14.0,
       isMultiDay: false
     },
     // February trips
@@ -42,7 +42,7 @@ const generateMockData = (currentYear) => {
       returnTime: '21:00',
       destination: 'Hamburg',
       purpose: 'Workshop Team Nord',
-      deductible: 70.0,
+      mealAllowance: 70.0,
       isMultiDay: true,
     },
     {
@@ -52,7 +52,7 @@ const generateMockData = (currentYear) => {
       returnTime: '18:00',
       destination: 'Frankfurt',
       purpose: 'Banktermin',
-      deductible: 14.0,
+      mealAllowance: 14.0,
       isMultiDay: false
     },
     // March trips
@@ -64,7 +64,7 @@ const generateMockData = (currentYear) => {
       returnTime: '22:00',
       destination: 'Berlin',
       purpose: 'Projektstart Kunde XYZ',
-      deductible: 126.0,
+      mealAllowance: 126.0,
       isMultiDay: true,
     },
     // April trips
@@ -75,7 +75,7 @@ const generateMockData = (currentYear) => {
       returnTime: '17:30',
       destination: 'Köln',
       purpose: 'Lieferantengespräch',
-      deductible: 14.0,
+      mealAllowance: 14.0,
       isMultiDay: false
     },
     {
@@ -86,7 +86,7 @@ const generateMockData = (currentYear) => {
       returnTime: '19:00',
       destination: 'Düsseldorf',
       purpose: 'Schulung SAP',
-      deductible: 70.0,
+      mealAllowance: 70.0,
       isMultiDay: true
     },
     // May trips
@@ -97,7 +97,7 @@ const generateMockData = (currentYear) => {
       returnTime: '20:00',
       destination: 'Nürnberg',
       purpose: 'Audit Qualitätsmanagement',
-      deductible: 14.0,
+      mealAllowance: 14.0,
       isMultiDay: false,
     },
     // June trips
@@ -109,7 +109,7 @@ const generateMockData = (currentYear) => {
       returnTime: '21:30',
       destination: 'Wien',
       purpose: 'Internationale Konferenz',
-      deductible: 140.0,
+      mealAllowance: 140.0,
       isMultiDay: true,
     },
     // July trips (Phase 1.1)
@@ -120,7 +120,7 @@ const generateMockData = (currentYear) => {
       returnTime: '18:00',
       destination: 'Essen',
       purpose: 'Technische Beratung',
-      deductible: 14.0,
+      mealAllowance: 14.0,
       isMultiDay: false
     },
     {
@@ -131,7 +131,7 @@ const generateMockData = (currentYear) => {
       returnTime: '20:00',
       destination: 'Salzburg',
       purpose: 'Sommerseminar',
-      deductible: 70.0,
+      mealAllowance: 70.0,
       isMultiDay: true,
     },
     // August trips (Phase 1.1)
@@ -142,7 +142,7 @@ const generateMockData = (currentYear) => {
       returnTime: '17:30',
       destination: 'Bonn',
       purpose: 'Behördentermin',
-      deductible: 14.0,
+      mealAllowance: 14.0,
       isMultiDay: false
     },
     {
@@ -153,7 +153,7 @@ const generateMockData = (currentYear) => {
       returnTime: '19:30',
       destination: 'Graz',
       purpose: 'Strategiemeeting',
-      deductible: 70.0,
+      mealAllowance: 70.0,
       isMultiDay: true
     },
     // September trips (Phase 1.1)
@@ -164,7 +164,7 @@ const generateMockData = (currentYear) => {
       returnTime: '19:00',
       destination: 'Dresden',
       purpose: 'Herbstmesse Besuch',
-      deductible: 14.0,
+      mealAllowance: 14.0,
       isMultiDay: false
     },
     {
@@ -175,7 +175,7 @@ const generateMockData = (currentYear) => {
       returnTime: '20:30',
       destination: 'Hannover',
       purpose: 'Produktpräsentation',
-      deductible: 70.0,
+      mealAllowance: 70.0,
       isMultiDay: true,
     },
     // October trips (Phase 1.1)
@@ -187,7 +187,7 @@ const generateMockData = (currentYear) => {
       returnTime: '21:00',
       destination: 'Zürich',
       purpose: 'Internationale Konferenz',
-      deductible: 98.0,
+      mealAllowance: 98.0,
       isMultiDay: true
     },
     {
@@ -197,7 +197,7 @@ const generateMockData = (currentYear) => {
       returnTime: '17:00',
       destination: 'Karlsruhe',
       purpose: 'Technisches Audit',
-      deductible: 14.0,
+      mealAllowance: 14.0,
       isMultiDay: false,
     },
     // November trips (Phase 1.1)
@@ -208,7 +208,7 @@ const generateMockData = (currentYear) => {
       returnTime: '18:00',
       destination: 'Bremen',
       purpose: 'Kundenmeeting',
-      deductible: 14.0,
+      mealAllowance: 14.0,
       isMultiDay: false
     },
     {
@@ -219,7 +219,7 @@ const generateMockData = (currentYear) => {
       returnTime: '20:00',
       destination: 'Dortmund',
       purpose: 'Workshop Digitalisierung',
-      deductible: 70.0,
+      mealAllowance: 70.0,
       isMultiDay: true
     },
     // December trips (Phase 1.1)
@@ -230,7 +230,7 @@ const generateMockData = (currentYear) => {
       returnTime: '19:30',
       destination: 'Wiesbaden',
       purpose: 'Jahresplanung Meeting',
-      deductible: 14.0,
+      mealAllowance: 14.0,
       isMultiDay: false
     },
     {
@@ -241,7 +241,7 @@ const generateMockData = (currentYear) => {
       returnTime: '22:00',
       destination: 'Wien',
       purpose: 'Jahresabschluss-Workshop',
-      deductible: 98.0,
+      mealAllowance: 98.0,
       isMultiDay: true,
     }
   ];

@@ -104,7 +104,7 @@ export default function Header() {
     const publicTransportSum = publicTransportEntries.reduce((s, m) => s + (m.allowance || 0), 0);
     
     const mileageSum = amountTo + amountFrom + publicTransportSum;
-    return sum + (entry.deductible || 0) + mileageSum;
+    return sum + (entry.mealAllowance || 0) + mileageSum;
   }, 0);
 
   const expenseTotal = filteredExpenseEntries.reduce((sum, entry) => sum + (entry.amount || 0), 0);

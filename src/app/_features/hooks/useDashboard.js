@@ -23,7 +23,7 @@ export const useDashboard = () => {
   [monthlyEmployerExpenses, selectedYear]);
 
   const totalTrips = useMemo(() => 
-    filteredTrips.reduce((sum, entry) => sum + entry.deductible, 0),
+    filteredTrips.reduce((sum, entry) => sum + entry.mealAllowance, 0),
   [filteredTrips]);
 
   const totalMileage = useMemo(() => 
@@ -80,7 +80,7 @@ export const useDashboard = () => {
 
   // Combine and sort recent activities
   const recentActivities = useMemo(() => [
-    ...tripEntries.map(e => ({ ...e, type: 'Verpflegung', amount: e.deductible })),
+    ...tripEntries.map(e => ({ ...e, type: 'Verpflegung', amount: e.mealAllowance })),
     ...mileageEntries.map(e => ({ ...e, type: 'Fahrt', amount: e.allowance })),
     ...equipmentEntries.map(e => ({ ...e, type: 'Arbeitsmittel', amount: e.deductibleAmount }))
   ]

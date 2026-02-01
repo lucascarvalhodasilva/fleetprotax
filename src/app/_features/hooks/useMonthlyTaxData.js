@@ -33,7 +33,7 @@ export const useMonthlyTaxData = (year) => {
       });
       
       // Calculate totals
-      const tripsDeductible = monthTrips.reduce((sum, t) => sum + (t.deductible || 0), 0);
+      const tripsDeductible = monthTrips.reduce((sum, t) => sum + (t.mealAllowance || 0), 0);
       const mileageDeductible = monthMileage.reduce((sum, m) => sum + (m.allowance || 0), 0);
       
       // Calculate equipment depreciation for this month

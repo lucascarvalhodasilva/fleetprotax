@@ -4,7 +4,7 @@ import { monthNames } from '../utils/tripCalculations';
 /**
  * @typedef {Object} TripEntry
  * @property {string|Date} date - Date of the trip entry
- * @property {number} deductible - Deductible amount in euros
+ * @property {number} mealAllowance - Meal allowance amount in euros
  */
 
 /**
@@ -43,7 +43,7 @@ export default function BalanceSheetScroller({
   handleMonthClick
 }) {
   // Calculate Yearly Totals
-  const totalIncome = tripEntries.reduce((sum, m) => sum + m.deductible, 0) + 
+  const totalIncome = tripEntries.reduce((sum, m) => sum + m.mealAllowance, 0) + 
     mileageEntries
       .filter(m => new Date(m.date).getFullYear() === parseInt(selectedYear))
       .reduce((sum, m) => sum + (m.allowance || 0), 0);
@@ -159,7 +159,7 @@ export default function BalanceSheetScroller({
             
             const monthlyTrips = tripEntries
               .filter(m => new Date(m.date).getMonth() === month)
-              .reduce((sum, m) => sum + m.deductible, 0);
+              .reduce((sum, m) => sum + m.mealAllowance, 0);
               
             const monthlyMileage = mileageEntries
               .filter(m => {

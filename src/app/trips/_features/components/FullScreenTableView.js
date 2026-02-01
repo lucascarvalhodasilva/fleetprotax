@@ -11,7 +11,7 @@ const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli'
  * @property {string} startTime - Start time
  * @property {string} endTime - End time
  * @property {number} duration - Duration in hours
- * @property {number} deductible - Deductible trip amount
+ * @property {number} mealAllowance - Meal allowance amount
  */
 
 /**
@@ -34,7 +34,7 @@ const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli'
  */
 
 /**
- * Calculates total deductible for an entry including mileage
+ * Calculates total meal allowance for an entry including mileage
  */
 function calculateEntryTotal(entry, mileageEntries) {
   const relatedMileage = mileageEntries.filter(m => m.relatedTripId === entry.id);
@@ -53,7 +53,7 @@ function calculateEntryTotal(entry, mileageEntries) {
   
   return {
     mileageSum,
-    totalDeductible: entry.deductible + mileageSum
+    totalMealAllowance: entry.mealAllowance + mileageSum
   };
 }
 
@@ -93,8 +93,8 @@ export default function FullScreenTableView({
   // Calculate totals per month
   const monthlyTotals = Object.keys(entriesByMonth).reduce((acc, month) => {
     acc[month] = entriesByMonth[month].reduce((sum, entry) => {
-      const { totalDeductible } = calculateEntryTotal(entry, mileageEntries);
-      return sum + totalDeductible;
+      const { totalMealAllowance } = calculateEntryTotal(entry, mileageEntries);
+      return sum + totalMealAllowance;
     }, 0);
     return acc;
   }, {});
@@ -108,17 +108,17 @@ export default function FullScreenTableView({
     return acc;
   }, {});
 
-  // Calculate deductible totals per month
-  const monthlyDeductibleTotals = Object.keys(entriesByMonth).reduce((acc, month) => {
+  // Calculate meal allowance totals per month
+  const monthlyMealAllowanceTotals = Object.keys(entriesByMonth).reduce((acc, month) => {
     acc[month] = entriesByMonth[month].reduce((sum, entry) => {
-      return sum + (entry.deductible || 0);
+      return sum + (entry.mealAllowance || 0);
     }, 0);
     return acc;
   }, {});
 
   const totalSum = tripEntries.reduce((sum, entry) => {
-    const { totalDeductible } = calculateEntryTotal(entry, mileageEntries);
-    return sum + totalDeductible;
+    const { totalMealAllowance } = calculateEntryTotal(entry, mileageEntries);
+    return sum + totalMealAllowance;
   }, 0);
 
   const totalMileage = tripEntries.reduce((sum, entry) => {
@@ -126,8 +126,8 @@ export default function FullScreenTableView({
     return sum + mileageSum;
   }, 0);
 
-  const totalDeductible = tripEntries.reduce((sum, entry) => {
-    return sum + (entry.deductible || 0);
+  const totalMealAllowance = tripEntries.reduce((sum, entry) => {
+    return sum + (entry.mealAllowance || 0);
   }, 0);
 
   // Sort all entries by date for flat table view
@@ -228,7 +228,7 @@ export default function FullScreenTableView({
                           {monthNames[month]} <span className="font-normal text-muted-foreground text-xs">({monthEntries.length})</span>
                         </td>
                         <td className="border border-border px-3 py-2 text-right font-semibold text-emerald-600">
-                          {monthlyDeductibleTotals[month].toFixed(2)}
+                          {monthlyMealAllowanceTotals[month].toFixed(2)}
                         </td>
                         <td className="border border-border px-3 py-2 text-right font-semibold text-blue-600">
                           {monthlyMileageTotals[month].toFixed(2)}
@@ -240,7 +240,7 @@ export default function FullScreenTableView({
                       
                       {/* Month Entries */}
                       {!isCollapsed && monthEntries.map((entry, idx) => {
-                        const { mileageSum, totalDeductible } = calculateEntryTotal(entry, mileageEntries);
+                        const { mileageSum, totalMealAllowance } = calculateEntryTotal(entry, mileageEntries);
                         const isMultiDay = entry.endDate && entry.endDate !== entry.date;
                         const rowNumber = monthEntries.indexOf(entry) + 1;
 
@@ -265,8 +265,8 @@ export default function FullScreenTableView({
                               {(entry.duration || 0).toFixed(1)}
                             </td>
                             <td className="border border-border px-3 py-2 text-right tabular-nums">
-                              <span className={entry.deductible > 0 ? 'text-emerald-600' : 'text-muted-foreground'}>
-                                {(entry.deductible || 0).toFixed(2)}
+                              <span className={entry.mealAllowance > 0 ? 'text-emerald-600' : 'text-muted-foreground'}>
+                                {(entry.mealAllowance || 0).toFixed(2)}
                               </span>
                             </td>
                             <td className="border border-border px-3 py-2 text-right tabular-nums">
@@ -275,7 +275,7 @@ export default function FullScreenTableView({
                               </span>
                             </td>
                             <td className="border border-border px-3 py-2 text-right font-semibold text-foreground bg-muted/20 tabular-nums">
-                              {totalDeductible.toFixed(2)}
+                              {totalMealAllowance.toFixed(2)}
                             </td>
                           </tr>
                         );
@@ -294,7 +294,7 @@ export default function FullScreenTableView({
           <div className="flex items-center gap-6">
             <div className="flex flex-col items-end gap-0.5">
               <span className="text-[11px] text-muted-foreground">Verpflegung</span>
-              <span className="text-base font-semibold text-emerald-600">{totalDeductible.toFixed(2)} €</span>
+              <span className="text-base font-semibold text-emerald-600">{totalMealAllowance.toFixed(2)} €</span>
             </div>
             <div className="flex flex-col items-end gap-0.5">
               <span className="text-[11px] text-muted-foreground">Fahrtkosten</span>
