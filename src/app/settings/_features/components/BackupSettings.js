@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import JSZip from 'jszip';
 import { LoadingButton } from '@/components/shared/skeletons';
+import BackupService from '@/services/backup.service';
 
 export default function BackupSettings() {
   const {
@@ -31,69 +32,35 @@ export default function BackupSettings() {
   const [selectedName, setSelectedName] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoreStatus, setRestoreStatus] = useState(null); // { type: 'success' | 'error', message: string }
+  const [backupPreview, setBackupPreview] = useState(null); // Preview data before import
 
   const handleCreateBackup = async () => {
     setIsBackingUp(true);
     setBackupStatus(null);
 
-    const backupData = {
-      version: 1,
-      timestamp: new Date().toISOString(),
-      data: {
-        mealEntries: tripEntries,
-        mileageEntries,
-        equipmentEntries,
-        expenseEntries,
+    // Create v2.0.0 backup data structure
+    const backupData = BackupService.createBackupData({
+      trips: tripEntries,
+      mileage: mileageEntries,
+      equipment: equipmentEntries,
+      expenses: expenseEntries,
+      settings: {
         monthlyEmployerExpenses,
         defaultCommute,
         taxRates,
         selectedYear
       }
-    };
+    });
 
     try {
       if (!Capacitor.isNativePlatform()) {
         // Web-Fallback: ZIP erzeugen und Download/Save-Dialog anbieten
         const zip = new JSZip();
+        
+        // Add backup.json
         zip.file('backup.json', JSON.stringify(backupData, null, 2));
-        const blob = await zip.generateAsync({ type: 'blob' });
-
-        if (window.showSaveFilePicker) {
-          const handle = await window.showSaveFilePicker({
-            suggestedName: `backup_full_${Date.now()}.zip`,
-            types: [{
-              description: 'Backup ZIP',
-              accept: { 'application/zip': ['.zip'] }
-            }]
-          });
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-        } else if (window.navigator && typeof window.navigator.msSaveOrOpenBlob === 'function') {
-          // Legacy Edge/IE Save Dialog
-          window.navigator.msSaveOrOpenBlob(blob, `backup_full_${Date.now()}.zip`);
-        } else {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `backup_full_${Date.now()}.zip`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }
-
-        setBackupStatus('success'); 
-        setTimeout(() => setBackupStatus(null), 3000);
-      } else {
-        const timestamp = Date.now();
-        const zip = new JSZip();
-        let sharedSuccessfully = false;
-
-        // Backup JSON hinzufügen
-        zip.file('backup.json', JSON.stringify(backupData, null, 2));
-
-        // Belege aus receipts hinzufügen (falls vorhanden)
+        
+        // Add receipts from filesystem (if available on web)
         try {
           const dir = await Filesystem.readdir({
             path: 'receipts',
@@ -111,58 +78,122 @@ export default function BackupSettings() {
                 });
                 zip.file(`receipts/${name}`, file.data, { base64: true });
               } catch (readErr) {
-                console.warn(`Beleg ${name} konnte nicht ins Backup aufgenommen werden:`, readErr);
+                console.warn(`Receipt ${name} could not be added to backup:`, readErr);
               }
             }
           }
         } catch (dirErr) {
-          // Ordner existiert evtl. nicht – ignorieren
+          console.warn('Could not read receipts directory:', dirErr);
+        }
+        
+        // Generate ZIP blob
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const fileName = BackupService.generateFileName();
+
+        if (window.showSaveFilePicker) {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: fileName,
+            types: [{
+              description: 'Backup ZIP',
+              accept: { 'application/zip': ['.zip'] }
+            }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+        } else if (window.navigator && typeof window.navigator.msSaveOrOpenBlob === 'function') {
+          // Legacy Edge/IE Save Dialog
+          window.navigator.msSaveOrOpenBlob(blob, fileName);
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
         }
 
-        const zipBase64 = await zip.generateAsync({ type: 'base64' });
-        const zipPath = `backup_full_${timestamp}.zip`;
+        setBackupStatus('success'); 
+        setTimeout(() => setBackupStatus(null), 3000);
+      } else {
+        // Native platform (Android/iOS)
+        const zip = new JSZip();
 
-        // Datei nur temporär (Cache) ablegen, damit Nutzer den Zielort über Share wählt
+        // Add backup.json using the service
+        zip.file('backup.json', JSON.stringify(backupData, null, 2));
+
+        // Add receipts from Documents/receipts/ (if available)
+        let receiptsAdded = 0;
+        try {
+          console.log('Attempting to read receipts directory...');
+          const dir = await Filesystem.readdir({
+            path: 'receipts',
+            directory: Directory.Documents
+          });
+          console.log('Readdir response:', dir);
+          
+          // Handle different response formats from Filesystem API
+          let files = [];
+          if (Array.isArray(dir)) {
+            files = dir;
+          } else if (dir.files && Array.isArray(dir.files)) {
+            files = dir.files;
+          } else if (typeof dir === 'object' && dir.files) {
+            files = Array.isArray(dir.files) ? dir.files : Object.values(dir.files);
+          }
+          
+          console.log('Processed files array:', files.length, 'items');
+          
+          if (files && files.length > 0) {
+            for (const f of files) {
+              // Extract filename from various formats
+              const name = typeof f === 'string' ? f : (f.name || f.path);
+              if (!name) {
+                console.warn('Could not extract filename from:', f);
+                continue;
+              }
+              
+              try {
+                console.log('Reading receipt file:', name);
+                const file = await Filesystem.readFile({
+                  path: `receipts/${name}`,
+                  directory: Directory.Documents
+                });
+                if (file && file.data) {
+                  zip.file(`receipts/${name}`, file.data, { base64: true });
+                  receiptsAdded++;
+                  console.log('✓ Added receipt to backup:', name);
+                } else {
+                  console.error('File data is empty or invalid for:', name);
+                }
+              } catch (readErr) {
+                console.error(`✗ Could not add receipt ${name} to backup:`, readErr);
+              }
+            }
+          } else {
+            console.log('No receipt files found in receipts directory');
+          }
+        } catch (dirErr) {
+          console.error('Could not read receipts directory:', dirErr);
+        }
+        
+        console.log('Total receipts added to backup:', receiptsAdded);
+
+        const zipBase64 = await zip.generateAsync({ type: 'base64' });
+        const fileName = BackupService.generateFileName();
+
+        // Save backup directly to Documents directory (user-accessible location)
         const zipResult = await Filesystem.writeFile({
-          path: zipPath,
+          path: `FleetProTax/${fileName}`,
           data: zipBase64,
-          directory: Directory.Cache,
+          directory: Directory.Documents,
           recursive: true
         });
 
-        // Share-Sheet öffnen, damit Nutzer Ziel wählen kann; danach temporäre Datei entfernen
-        try {
-          const uriResult = await Filesystem.getUri({
-            path: zipPath,
-            directory: Directory.Cache
-          });
-          const shareResult = await Share.share({
-            title: 'Backup speichern',
-            text: 'Backup-Archiv teilen oder extern ablegen.',
-            url: uriResult.uri
-          });
-          if (shareResult && shareResult.activityType) {
-            sharedSuccessfully = true;
-          }
-        } catch (shareErr) {
-          console.warn('Share nicht möglich, temporäres Backup im Cache abgelegt:', shareErr);
-        } finally {
-          try {
-            await Filesystem.deleteFile({
-              path: zipPath,
-              directory: Directory.Cache
-            });
-          } catch (deleteErr) {
-            console.warn('Temporäre Backup-Datei konnte nicht gelöscht werden:', deleteErr);
-          }
-        }
-        
-        if (sharedSuccessfully) {
-          setBackupStatus('success');
-          setTimeout(() => setBackupStatus(null), 3000);
-        } else {
-          setBackupStatus(null);
-        }
+        setBackupStatus('success');
+        setTimeout(() => setBackupStatus(null), 3000);
       }
     } catch (error) {
       console.error('Backup failed:', error);
@@ -301,16 +332,58 @@ export default function BackupSettings() {
   };
 
   // Restore Logic
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     setSelectedFile(file || null);
     setSelectedName(file ? file.name : '');
     setRestoreStatus(null);
-  };
-
-  const parseBackupFromJsonString = (jsonString) => {
-    const parsed = JSON.parse(jsonString);
-    return parsed.data || parsed;
+    setBackupPreview(null);
+    
+    // Validate and preview backup
+    if (file) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const fileNameLower = file.name.toLowerCase();
+        let backupString = null;
+        
+        if (fileNameLower.endsWith('.zip')) {
+          const zip = await JSZip.loadAsync(arrayBuffer);
+          const backupFile = zip.file('backup.json');
+          if (!backupFile) {
+            setRestoreStatus({ type: 'error', message: 'In der ZIP wurde keine backup.json gefunden.' });
+            setSelectedFile(null);
+            setSelectedName('');
+            return;
+          }
+          backupString = await backupFile.async('string');
+        } else {
+          backupString = new TextDecoder().decode(arrayBuffer);
+        }
+        
+        // Parse and validate
+        const result = BackupService.parseBackup(backupString);
+        
+        if (!result.isValid) {
+          setRestoreStatus({ 
+            type: 'error', 
+            message: `Backup ungültig: ${result.errors.join(', ')}` 
+          });
+          setSelectedFile(null);
+          setSelectedName('');
+          return;
+        }
+        
+        // Set preview data
+        setBackupPreview(result.data);
+      } catch (error) {
+        setRestoreStatus({ 
+          type: 'error', 
+          message: `Datei konnte nicht gelesen werden: ${error.message}` 
+        });
+        setSelectedFile(null);
+        setSelectedName('');
+      }
+    }
   };
 
   const writeReceiptsIfAny = async (zipInstance) => {
@@ -366,8 +439,8 @@ export default function BackupSettings() {
   };
 
   const handleRestore = async () => {
-    if (!selectedFile) {
-      setRestoreStatus({ type: 'error', message: 'Bitte zuerst eine Backup-Datei auswählen (ZIP oder backup.json).' });
+    if (!selectedFile || !backupPreview) {
+      setRestoreStatus({ type: 'error', message: 'Bitte zuerst eine gültige Backup-Datei auswählen.' });
       return;
     }
 
@@ -377,28 +450,15 @@ export default function BackupSettings() {
     try {
       const arrayBuffer = await selectedFile.arrayBuffer();
       const fileNameLower = selectedFile.name.toLowerCase();
-      let backupData = null;
       let receiptsInfo = { restored: 0, total: 0 };
 
       if (fileNameLower.endsWith('.zip')) {
         const zip = await JSZip.loadAsync(arrayBuffer);
-        const backupFile = zip.file('backup.json');
-        if (!backupFile) {
-          throw new Error('In der ZIP wurde keine backup.json gefunden.');
-        }
-        const backupString = await backupFile.async('string');
-        backupData = parseBackupFromJsonString(backupString);
         receiptsInfo = await writeReceiptsIfAny(zip);
-      } else {
-        const backupString = new TextDecoder().decode(arrayBuffer);
-        backupData = parseBackupFromJsonString(backupString);
       }
 
-      if (!backupData) {
-        throw new Error('Backup enthält keine Daten.');
-      }
-
-      const success = importData(backupData);
+      // Import validated data (already parsed in handleFileChange)
+      const success = importData(backupPreview.data);
       if (!success) {
         throw new Error('Import fehlgeschlagen.');
       }
@@ -410,8 +470,11 @@ export default function BackupSettings() {
 
       setRestoreStatus({
         type: 'success',
-        message: `Backup geladen. ${receiptNote}`
+        message: `Backup erfolgreich geladen. ${receiptNote}`
       });
+      
+      // Clear preview after successful import
+      setBackupPreview(null);
     } catch (e) {
       console.error('Restore failed:', e);
       const message = e?.message || 'Wiederherstellung fehlgeschlagen.';
@@ -445,7 +508,7 @@ export default function BackupSettings() {
 
           {backupStatus === 'success' && (
             <span className="text-green-500 text-sm font-medium animate-in fade-in slide-in-from-left-2">
-              ✓ Backup erfolgreich erstellt
+              ✓ Backup erfolgreich erstellt{!Capacitor.isNativePlatform() ? '' : ' (Dokumente/FleetProTax/)'}
             </span>
           )}
           
@@ -472,6 +535,73 @@ export default function BackupSettings() {
               onChange={handleFileChange}
               ref={fileInputRef}
             />
+
+            {/* Backup Preview */}
+            {backupPreview && backupPreview.metadata && (
+              <div className="border border-border rounded-lg p-4 bg-surface space-y-3">
+                <h4 className="text-sm font-semibold text-foreground">Backup-Vorschau</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Version:</span>
+                    <span className="text-foreground font-medium">{backupPreview.backup?.version || 'Unbekannt'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Erstellt:</span>
+                    <span className="text-foreground font-medium">
+                      {backupPreview.backup?.createdAt 
+                        ? new Date(backupPreview.backup.createdAt).toLocaleString('de-DE')
+                        : 'Unbekannt'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Plattform:</span>
+                    <span className="text-foreground font-medium capitalize">{backupPreview.app?.platform || 'Unbekannt'}</span>
+                  </div>
+                  <div className="border-t border-border pt-2 mt-2">
+                    <p className="text-muted-foreground mb-2">Daten:</p>
+                    <div className="space-y-1 pl-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">• Fahrten:</span>
+                        <span className="text-foreground">{backupPreview.data?.trips?.length || 0} Einträge</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">• Kilometer:</span>
+                        <span className="text-foreground">{backupPreview.data?.mileage?.length || 0} Einträge</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">• Betriebsmittel:</span>
+                        <span className="text-foreground">{backupPreview.data?.equipment?.length || 0} Einträge</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">• Ausgaben:</span>
+                        <span className="text-foreground">{backupPreview.data?.expenses?.length || 0} Einträge</span>
+                      </div>
+                      {backupPreview.metadata?.hasReceipts && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">• Belege:</span>
+                          <span className="text-foreground">{backupPreview.metadata.receiptsCount} Dateien</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {backupPreview.metadata?.dateRange && (
+                    <div className="border-t border-border pt-2 mt-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Zeitraum:</span>
+                        <span className="text-foreground text-xs">
+                          {new Date(backupPreview.metadata.dateRange.start).toLocaleDateString('de-DE')} - {new Date(backupPreview.metadata.dateRange.end).toLocaleDateString('de-DE')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded p-2 mt-3">
+                  <p className="text-yellow-600 dark:text-yellow-400 text-xs font-medium">
+                    ⚠️ Aktuelle Daten werden überschrieben!
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center space-x-4">
               <LoadingButton
@@ -501,6 +631,7 @@ export default function BackupSettings() {
                     setSelectedFile(null);
                     setSelectedName('');
                     setRestoreStatus(null);
+                    setBackupPreview(null);
                     if (fileInputRef.current) fileInputRef.current.value = '';
                   }}
                   className="text-sm text-muted-foreground hover:text-foreground px-2"

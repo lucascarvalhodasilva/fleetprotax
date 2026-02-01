@@ -525,6 +525,7 @@ export const useTripForm = () => {
       employerExpenses: entry.employerExpenses || 0,
       commute: entry.commute || defaultCommute || DEFAULT_COMMUTE
     };
+    
     // Restore receipt if exists
     const relatedMileage = mileageEntries.filter(m => m.relatedTripId === entry.id);
     const transportEntry = relatedMileage.find(m => m.vehicleType === 'public_transport' && m.receiptFileName);
@@ -532,6 +533,13 @@ export const useTripForm = () => {
     let loadedReceipt = null;
     let loadedPath = null;
     let loadedReceiptType = 'image';
+
+    console.log('[useTripForm] startEdit - checking for receipt:', {
+      tripId: entry.id,
+      relatedMileageCount: relatedMileage.length,
+      hasTransportEntry: !!transportEntry,
+      receiptFileName: transportEntry?.receiptFileName
+    });
 
     if (transportEntry && transportEntry.receiptFileName) {
       // Determine file type from filename
@@ -542,13 +550,17 @@ export const useTripForm = () => {
       try {
         // Try reading from Documents/receipts/ (where we save it)
         let fileData;
+        console.log('[useTripForm] Attempting to read receipt from Documents:', transportEntry.receiptFileName);
+        
         try {
           const file = await Filesystem.readFile({
             path: `receipts/${transportEntry.receiptFileName}`,
             directory: Directory.Documents
           });
           fileData = file.data;
+          console.log('[useTripForm] ✓ Successfully read receipt from Documents');
         } catch (e) {
+          console.warn('[useTripForm] Failed to read from Documents, trying Data:', e);
           // Fallback to Data/receipts/ just in case
           try {
             const file = await Filesystem.readFile({
@@ -556,8 +568,9 @@ export const useTripForm = () => {
               directory: Directory.Data
             });
             fileData = file.data;
+            console.log('[useTripForm] ✓ Successfully read receipt from Data (fallback)');
           } catch (e2) {
-            console.warn("Could not find receipt file", e2);
+            console.error('[useTripForm] ✗ Could not find receipt file in either location:', e2);
           }
         }
 
@@ -566,6 +579,7 @@ export const useTripForm = () => {
           const tempFileName = `restored_${Date.now()}.${extension}`;
           const tempPath = `temp/transport/${tempFileName}`;
           
+          console.log('[useTripForm] Writing receipt to temp cache:', tempPath);
           await Filesystem.writeFile({
             path: tempPath,
             data: fileData,
@@ -575,10 +589,15 @@ export const useTripForm = () => {
 
           loadedReceipt = fileData;
           loadedPath = tempPath;
+          console.log('[useTripForm] ✓ Receipt restored successfully');
+        } else {
+          console.warn('[useTripForm] File data is empty or invalid');
         }
       } catch (e) {
-        console.error("Error restoring receipt for edit", e);
+        console.error("[useTripForm] Error restoring receipt for edit:", e);
       }
+    } else {
+      console.log('[useTripForm] No transport entry with receipt found');
     }
 
     setFormData(editData);
