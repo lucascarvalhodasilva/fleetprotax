@@ -1,7 +1,7 @@
 /**
  * Export Service
  * Handles data export and backup operations
- * Version: 1.0.0 - Initial release with nested transportRecords architecture
+ * Version: 1.0.1 - Total-distance semantics for transport records
  */
 
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -9,7 +9,7 @@ import { Share } from '@capacitor/share';
 import JSZip from 'jszip';
 
 /**
- * Export all app data as JSON (v1.0.0 format)
+ * Export all app data as JSON (v1.0.1 format)
  * Exports data with nested transportRecords architecture
  * @param {Object} data - All app data to export
  * @param {Array} data.trips - Trip entries with nested transportRecords
@@ -22,7 +22,7 @@ export const exportToJSON = async (data) => {
   const exportData = {
     ...data,
     exportDate: new Date().toISOString(),
-    version: '1.0.0',
+    version: '1.0.1',
     format: 'fleetprotax-export-v1'
   };
   return JSON.stringify(exportData, null, 2);
@@ -30,7 +30,7 @@ export const exportToJSON = async (data) => {
 
 /**
  * Import data from JSON
- * Supports v1.0.0 format (nested transportRecords) and legacy formats
+ * Supports v1.0.1 format (nested transportRecords) and legacy formats
  * @param {string} jsonString - JSON string to import
  * @returns {Object} Parsed data with nested transportRecords
  * @throws {Error} If JSON is invalid
@@ -50,10 +50,10 @@ export const importFromJSON = (jsonString) => {
 };
 
 /**
- * Create a backup ZIP file with data and receipts (v1.0.0 format)
+ * Create a backup ZIP file with data and receipts (v1.0.1 format)
  * Uses nested transportRecords architecture
  * @param {Object} data - Backup data object (from BackupService.createBackupData)
- * @param {Object} data.backup - Backup metadata including version 1.0.0
+ * @param {Object} data.backup - Backup metadata including version 1.0.1
  * @param {Object} data.data - App data with nested transportRecords
  * @param {Array} data.data.trips - Trips with nested transportRecords
  * @param {string[]} receiptFiles - Array of receipt file names to include
@@ -62,7 +62,7 @@ export const importFromJSON = (jsonString) => {
 export const createBackupZip = async (data, receiptFiles = []) => {
   const zip = new JSZip();
   
-  // Add backup JSON (already in v1.0.0 format from BackupService)
+  // Add backup JSON (already in v1.0.1 format from BackupService)
   zip.file('backup.json', JSON.stringify(data, null, 2));
   
   // Add receipts folder if there are receipts

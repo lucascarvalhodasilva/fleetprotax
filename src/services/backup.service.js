@@ -1,15 +1,15 @@
 /**
  * Backup Service
  * Handles backup creation, parsing, validation and import for FleetProTax
- * Version: 1.0.0 - Initial release with nested transportRecords architecture
+ * Version: 1.0.1 - Total-distance semantics for transport records
  */
 
 import { Capacitor } from '@capacitor/core';
 import JSZip from 'jszip';
 
 // App version - should match package.json
-const APP_VERSION = '1.0.0'; // Initial release with nested transportRecords
-const BACKUP_VERSION = '1.0.0'; // Matches APP_VERSION
+const APP_VERSION = '1.0.1'; // Total-distance semantics for transport records
+const BACKUP_VERSION = '1.0.1'; // Matches APP_VERSION
 const BACKUP_FORMAT = 'fleetprotax-backup-v1';
 
 /**
@@ -38,7 +38,7 @@ export const generateFileName = (date = new Date()) => {
 };
 
 /**
- * Calculate metadata from backup data (v1.0.0 - nested transportRecords)
+ * Calculate metadata from backup data (v1.0.1 - nested transportRecords)
  * @param {Object} data - Backup data object
  * @param {Array} data.trips - Trips with nested transportRecords
  * @param {Array} data.equipment - Equipment entries
@@ -95,7 +95,7 @@ const calculateMetadata = (data) => {
 };
 
 /**
- * Create backup data structure (v1.0.0 - nested transportRecords)
+ * Create backup data structure (v1.0.1 - nested transportRecords)
  * 
  * Data Structure:
  * - trips: Array of trip objects
@@ -113,7 +113,7 @@ const calculateMetadata = (data) => {
  * @param {Array} params.equipment - Equipment purchase entries
  * @param {Array} params.expenses - Business expense entries
  * @param {Object} params.settings - Application settings
- * @returns {Object} Backup data structure with v1.0.0 format identifier
+ * @returns {Object} Backup data structure with v1.0.1 format identifier
  */
 export const createBackupData = ({
   trips = [],
@@ -147,7 +147,7 @@ export const createBackupData = ({
 };
 
 /**
- * Validate backup data structure (v1.0.0 only)
+ * Validate backup data structure (v1.0.x only)
  * @param {Object} data - Parsed backup data
  * @returns {Object} { isValid: boolean, errors: string[], version: string }
  */
@@ -168,9 +168,9 @@ export const validateBackup = (data) => {
   // Get backup version
   const version = data.backup?.version;
   
-  // Only accept v1.0.0
-  if (version !== '1.0.0') {
-    errors.push(`Inkompatible Backup-Version: ${version} (erwartet: 1.0.0)`);
+  // Accept v1.0.0 and v1.0.1 (migration will handle 1.0.0)
+  if (!['1.0.0', '1.0.1'].includes(version)) {
+    errors.push(`Inkompatible Backup-Version: ${version} (erwartet: 1.0.0 oder 1.0.1)`);
   }
   
   // Check app structure

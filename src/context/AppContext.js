@@ -4,6 +4,10 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 
 const AppContext = createContext();
 
+const APP_VERSION = '1.0.1';
+const DATA_VERSION_KEY = 'appDataVersion';
+const DISTANCE_MIGRATION_VERSION = '1.0.1';
+
 // ============================================
 // ARCHITECTURE CONSTRAINT & TAX SEMANTICS
 // ============================================
@@ -486,6 +490,95 @@ const calculateTransportSum = (transportRecords = []) => {
   return transportRecords.reduce((sum, record) => sum + (record.allowance || 0), 0);
 };
 
+const parseVersion = (version = '0.0.0') => version.split('.').map(part => parseInt(part, 10) || 0);
+
+const isVersionLessThan = (left, right) => {
+  const leftParts = parseVersion(left);
+  const rightParts = parseVersion(right);
+  for (let i = 0; i < Math.max(leftParts.length, rightParts.length); i += 1) {
+    const l = leftParts[i] || 0;
+    const r = rightParts[i] || 0;
+    if (l < r) return true;
+    if (l > r) return false;
+  }
+  return false;
+};
+
+const migrateCommuteDistances = (commute) => {
+  if (!commute) return commute;
+  const next = { ...commute };
+  ['car', 'motorcycle', 'bike'].forEach((mode) => {
+    const rawDistance = parseFloat(next[mode]?.distance);
+    if (Number.isFinite(rawDistance) && rawDistance > 0) {
+      next[mode] = {
+        ...next[mode],
+        distance: rawDistance * 2
+      };
+    }
+  });
+  return next;
+};
+
+const migrateTripCommuteDistances = (trips = []) => {
+  return trips.map((trip) => ({
+    ...trip,
+    commute: migrateCommuteDistances(trip.commute)
+  }));
+};
+
+const migrateTripTransportDistances = (trips = [], taxRates = {}) => {
+  const rates = {
+    car: taxRates.mileageRateCar ?? taxRates.mileageRate ?? 0.30,
+    motorcycle: taxRates.mileageRateMotorcycle ?? 0.20,
+    bike: taxRates.mileageRateBike ?? 0.05
+  };
+
+  return trips.map((trip) => {
+    const nextRecords = (trip.transportRecords || []).map((record) => {
+      if (!rates[record.vehicleType]) return record;
+
+      const baseDistance = Number.isFinite(record.distance) ? record.distance : 0;
+      const baseTotalKm = Number.isFinite(record.totalKm) ? record.totalKm : baseDistance;
+      const nextDistance = baseDistance * 2;
+      const nextTotalKm = baseTotalKm * 2;
+      const allowance = parseFloat((nextDistance * rates[record.vehicleType]).toFixed(2));
+
+      return {
+        ...record,
+        distance: nextDistance,
+        totalKm: nextTotalKm,
+        allowance
+      };
+    });
+
+    return {
+      ...trip,
+      transportRecords: nextRecords,
+      sumTransportAllowances: calculateTransportSum(nextRecords)
+    };
+  });
+};
+
+const applyDistanceMigrationIfNeeded = ({ trips, defaultCommute, settings }, dataVersion, taxRates) => {
+  if (!isVersionLessThan(dataVersion, DISTANCE_MIGRATION_VERSION)) {
+    return { trips, defaultCommute, settings };
+  }
+
+  const updatedCommuteTrips = migrateTripCommuteDistances(trips || []);
+  const updatedTrips = migrateTripTransportDistances(updatedCommuteTrips, taxRates);
+
+  return {
+    trips: updatedTrips,
+    defaultCommute: migrateCommuteDistances(defaultCommute),
+    settings: settings
+      ? {
+          ...settings,
+          defaultCommute: migrateCommuteDistances(settings.defaultCommute)
+        }
+      : settings
+  };
+};
+
 export function AppProvider({ children}) {
   const [tripEntries, setTripEntries] = useState([]);
   const [equipmentEntries, setEquipmentEntries] = useState([]);
@@ -510,6 +603,7 @@ export function AppProvider({ children}) {
 
   // Load from local storage on mount
   useEffect(() => {
+    const storedVersion = localStorage.getItem(DATA_VERSION_KEY) || '1.0.0';
     const storedTrips = localStorage.getItem('mealEntries');
     const storedEquipment = localStorage.getItem('equipmentEntries');
     const storedExpenses = localStorage.getItem('expenseEntries');
@@ -517,27 +611,39 @@ export function AppProvider({ children}) {
     const storedDefaultCommute = localStorage.getItem('defaultCommute');
     const storedTaxRates = localStorage.getItem('taxRates');
 
-    // Load data from localStorage
-    if (storedTrips) {
-      const trips = JSON.parse(storedTrips);
-      setTripEntries(trips);
-    } else if (ENABLE_MOCK_DATA) {
-      // Load mock data for development
-      const mockData = generateMockData(new Date().getFullYear());
-      setTripEntries(mockData.tripEntries);
-      setMonthlyEmployerExpenses(mockData.monthlyEmployerExpenses);
-      setEquipmentEntries(mockData.equipmentEntries);
-      setExpenseEntries(mockData.expenseEntries);
-    }
+    let initialTrips = storedTrips ? JSON.parse(storedTrips) : [];
+    let initialMonthlyExpenses = storedMonthlyExpenses ? JSON.parse(storedMonthlyExpenses) : [];
+    let initialEquipmentEntries = storedEquipment ? JSON.parse(storedEquipment) : [];
+    let initialExpenseEntries = storedExpenses ? JSON.parse(storedExpenses) : [];
+    let initialDefaultCommute = storedDefaultCommute ? JSON.parse(storedDefaultCommute) : defaultCommute;
+    let initialTaxRates = taxRates;
 
-    if (storedEquipment) setEquipmentEntries(JSON.parse(storedEquipment));
-    if (storedExpenses) setExpenseEntries(JSON.parse(storedExpenses));
-    if (storedMonthlyExpenses) setMonthlyEmployerExpenses(JSON.parse(storedMonthlyExpenses));
-    if (storedDefaultCommute) setDefaultCommute(JSON.parse(storedDefaultCommute));
     if (storedTaxRates) {
       const parsedRates = JSON.parse(storedTaxRates);
-      setTaxRates(prev => ({ ...prev, ...parsedRates }));
+      initialTaxRates = { ...initialTaxRates, ...parsedRates };
     }
+
+    if (!storedTrips && ENABLE_MOCK_DATA) {
+      const mockData = generateMockData(new Date().getFullYear());
+      initialTrips = mockData.tripEntries;
+      initialMonthlyExpenses = mockData.monthlyEmployerExpenses;
+      initialEquipmentEntries = mockData.equipmentEntries;
+      initialExpenseEntries = mockData.expenseEntries;
+    }
+
+    const migrated = applyDistanceMigrationIfNeeded(
+      { trips: initialTrips, defaultCommute: initialDefaultCommute },
+      storedVersion,
+      initialTaxRates
+    );
+
+    setTripEntries(migrated.trips || []);
+    setMonthlyEmployerExpenses(initialMonthlyExpenses);
+    setEquipmentEntries(initialEquipmentEntries);
+    setExpenseEntries(initialExpenseEntries);
+    setDefaultCommute(migrated.defaultCommute || initialDefaultCommute);
+    setTaxRates(initialTaxRates);
+    localStorage.setItem(DATA_VERSION_KEY, APP_VERSION);
   }, []);
 
   // Save to local storage on change
@@ -685,27 +791,45 @@ export function AppProvider({ children}) {
     if (!data) return false;
     
     try {
-      // Only support v1.0.0 format (trips with nested transportRecords)
-      if (data.trips) {
-        setTripEntries(data.trips || []);
+      const sourceVersion = data?.backup?.version || data?.version || '1.0.0';
+      const payload = data?.data ? data.data : data;
+
+      const importTaxRates =
+        payload?.settings?.taxRates ||
+        payload?.taxRates ||
+        taxRates;
+
+      const migrationInput = {
+        trips: payload?.trips || [],
+        defaultCommute: payload?.defaultCommute || payload?.settings?.defaultCommute,
+        settings: payload?.settings
+      };
+
+      const migrated = applyDistanceMigrationIfNeeded(migrationInput, sourceVersion, importTaxRates);
+
+      if (payload.trips) {
+        setTripEntries(migrated.trips || []);
       }
-      
-      if (data.equipment) setEquipmentEntries(data.equipment);
-      if (data.equipmentEntries) setEquipmentEntries(data.equipmentEntries);
-      if (data.expenses) setExpenseEntries(data.expenses);
-      if (data.expenseEntries) setExpenseEntries(data.expenseEntries);
-      if (data.monthlyEmployerExpenses) setMonthlyEmployerExpenses(data.monthlyEmployerExpenses);
-      if (data.defaultCommute) setDefaultCommute(data.defaultCommute);
-      if (data.taxRates) setTaxRates(data.taxRates);
-      if (data.selectedYear) setSelectedYear(data.selectedYear);
-      
-      // Handle settings object format
-      if (data.settings) {
-        if (data.settings.monthlyEmployerExpenses) setMonthlyEmployerExpenses(data.settings.monthlyEmployerExpenses);
-        if (data.settings.defaultCommute) setDefaultCommute(data.settings.defaultCommute);
-        if (data.settings.taxRates) setTaxRates(data.settings.taxRates);
-        if (data.settings.selectedYear) setSelectedYear(data.settings.selectedYear);
+
+      if (payload.equipment) setEquipmentEntries(payload.equipment);
+      if (payload.equipmentEntries) setEquipmentEntries(payload.equipmentEntries);
+      if (payload.expenses) setExpenseEntries(payload.expenses);
+      if (payload.expenseEntries) setExpenseEntries(payload.expenseEntries);
+      if (payload.monthlyEmployerExpenses) setMonthlyEmployerExpenses(payload.monthlyEmployerExpenses);
+      if (payload.defaultCommute || payload.settings?.defaultCommute) {
+        setDefaultCommute(migrated.defaultCommute || payload.defaultCommute || payload.settings?.defaultCommute);
       }
+      if (payload.taxRates) setTaxRates(payload.taxRates);
+      if (payload.selectedYear) setSelectedYear(payload.selectedYear);
+
+      if (payload.settings) {
+        if (payload.settings.monthlyEmployerExpenses) setMonthlyEmployerExpenses(payload.settings.monthlyEmployerExpenses);
+        if (payload.settings.defaultCommute) setDefaultCommute(migrated.defaultCommute || payload.settings.defaultCommute);
+        if (payload.settings.taxRates) setTaxRates(payload.settings.taxRates);
+        if (payload.settings.selectedYear) setSelectedYear(payload.settings.selectedYear);
+      }
+
+      localStorage.setItem(DATA_VERSION_KEY, APP_VERSION);
       
       return true;
     } catch (e) {

@@ -421,14 +421,15 @@ export const useTripForm = () => {
           const dist = sanitizedCommute[mode].distance;
           if (dist > 0) {
             const ratePerKm = getMileageRate(mode);
-            const allowance = parseFloat((dist * ratePerKm).toFixed(2));
+            const perRecordDistance = dist / 2;
+            const allowance = parseFloat((perRecordDistance * ratePerKm).toFixed(2));
             
             // Trip to station (Start Date)
             transportRecords.push({
               id: Date.now() + transportRecords.length,
               date: formData.date,
-              distance: dist,
-              totalKm: dist,
+              distance: perRecordDistance,
+              totalKm: perRecordDistance,
               allowance: allowance,
               vehicleType: mode,
               destination: 'Bahnhof'
@@ -438,8 +439,8 @@ export const useTripForm = () => {
             transportRecords.push({
               id: Date.now() + transportRecords.length + 1,
               date: formData.endDate || formData.date,
-              distance: dist,
-              totalKm: dist,
+              distance: perRecordDistance,
+              totalKm: perRecordDistance,
               allowance: allowance,
               vehicleType: mode,
               destination: 'Bahnhof (Rückfahrt)'

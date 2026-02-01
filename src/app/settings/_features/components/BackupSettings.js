@@ -37,7 +37,7 @@ export default function BackupSettings() {
     setIsBackingUp(true);
     setBackupStatus(null);
 
-    // Create v1.0.0 backup data structure (with nested transportRecords)
+    // Create v1.0.1 backup data structure (with nested transportRecords)
     const backupData = BackupService.createBackupData({
       trips: tripEntries,
       equipment: equipmentEntries,
@@ -461,7 +461,7 @@ export default function BackupSettings() {
       }
 
       // Import validated data (already parsed in handleFileChange)
-      const success = importData(backupPreview.data);
+      const success = importData(backupPreview);
       if (!success) {
         throw new Error('Import fehlgeschlagen.');
       }
