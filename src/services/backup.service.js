@@ -99,10 +99,10 @@ const calculateMetadata = (data) => {
  * 
  * Data Structure:
  * - trips: Array of trip objects
- *   - id, destination, date, endDate, startTime, endTime
+ *   - id, destination, date, endDate, departureTime, returnTime
  *   - mealAllowance: CALCULATED from departureTime to returnTime
  *   - transportRecords: NESTED array of transport entries
- *     - id, distance, date, vehicleType, allowance, receiptFileName, purpose
+ *     - id, distance, date, vehicleType, allowance, receiptFileName
  *   - sumTransportAllowances: PRECOMPUTED sum of transport allowances
  * - equipment: Array of equipment purchases
  * - expenses: Array of business expenses

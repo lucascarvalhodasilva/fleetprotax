@@ -427,13 +427,10 @@ export const useTripForm = () => {
             transportRecords.push({
               id: Date.now() + transportRecords.length,
               date: formData.date,
-              startLocation: 'Zuhause',
-              endLocation: 'Bahnhof',
               distance: dist,
               totalKm: dist,
               allowance: allowance,
               vehicleType: mode,
-              purpose: 'Fahrt zum Bahnhof (Dienstreise Beginn)',
               destination: 'Bahnhof'
             });
 
@@ -441,13 +438,10 @@ export const useTripForm = () => {
             transportRecords.push({
               id: Date.now() + transportRecords.length + 1,
               date: formData.endDate || formData.date,
-              startLocation: 'Bahnhof',
-              endLocation: 'Zuhause',
               distance: dist,
               totalKm: dist,
               allowance: allowance,
               vehicleType: mode,
-              purpose: 'Fahrt vom Bahnhof (Dienstreise Ende)',
               destination: 'Bahnhof (Rückfahrt)'
             });
           }
@@ -466,13 +460,10 @@ export const useTripForm = () => {
         transportRecords.push({
           id: Date.now() + transportRecords.length + 2,
           date: formData.date,
-          startLocation: 'Start',
-          endLocation: 'Ziel',
           distance: 0,
           totalKm: 0,
           allowance: ticketCost,
           vehicleType: 'public_transport',
-          purpose: 'Fahrtkosten (Tickets/Öffis)',
           destination: 'Öffentliche Verkehrsmittel',
           receiptFileName
         });
