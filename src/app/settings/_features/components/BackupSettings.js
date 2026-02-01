@@ -87,10 +87,11 @@ export default function BackupSettings() {
         setBackupStatus('success'); 
         setTimeout(() => setBackupStatus(null), 3000);
       } else {
+        // Native platform (Android/iOS)
         const zip = new JSZip();
         let sharedSuccessfully = false;
 
-        // Backup JSON hinzufügen
+        // Add backup.json using the service
         zip.file('backup.json', JSON.stringify(backupData, null, 2));
 
         // Belege aus receipts hinzufügen (falls vorhanden)
