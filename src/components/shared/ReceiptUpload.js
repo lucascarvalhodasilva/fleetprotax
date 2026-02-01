@@ -7,11 +7,12 @@ import dynamic from 'next/dynamic';
 
 const PDFViewerComponent = dynamic(() => import('./PDFViewer'), { ssr: false });
 
-// Convert base64 to Uint8Array for react-pdf
-const base64ToUint8Array = (base64) => {
+// Don't convert - react-pdf accepts base64 strings directly
+// This avoids any ArrayBuffer/Blob issues
+const prepareBase64String = (base64) => {
   try {
     if (!base64 || typeof base64 !== 'string') {
-      console.error('base64ToUint8Array: Invalid input', typeof base64);
+      console.error('prepareBase64String: Invalid input', typeof base64);
       return null;
     }
     
@@ -22,17 +23,12 @@ const base64ToUint8Array = (base64) => {
     }
     cleaned = cleaned.replace(/^data:[^;]+;base64,/, '');
     
-    // Remove whitespace that might cause issues
+    // Remove whitespace
     cleaned = cleaned.replace(/\s/g, '');
     
-    const binary = atob(cleaned);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
+    return cleaned || null;
   } catch (e) {
-    console.error('base64ToUint8Array failed:', e, 'Input length:', base64?.length);
+    console.error('prepareBase64String failed:', e, 'Input length:', base64?.length);
     return null;
   }
 };
@@ -57,7 +53,7 @@ export default function ReceiptUpload({
     return () => { document.body.style.overflow = ''; };
   }, [showViewer]);
 
-  // Convert PDF for react-pdf - do this whenever receipt changes
+  // Prepare PDF base64 string - do this whenever receipt changes
   useEffect(() => {
     if (receiptType === 'pdf' && receipt) {
       setPdfError(false);
@@ -66,15 +62,16 @@ export default function ReceiptUpload({
       // Small delay to ensure state is ready
       const timer = setTimeout(() => {
         try {
-          const converted = base64ToUint8Array(receipt);
-          if (converted && converted.length > 0) {
-            setPdfData(converted);
+          const base64String = prepareBase64String(receipt);
+          if (base64String && base64String.length > 0) {
+            setPdfData(base64String);
+            console.log('PDF base64 string prepared, length:', base64String.length);
           } else {
-            console.error('PDF conversion returned empty or null');
+            console.error('PDF preparation returned empty or null');
             setPdfError(true);
           }
         } catch (e) {
-          console.error('PDF conversion error:', e);
+          console.error('PDF preparation error:', e);
           setPdfError(true);
         }
       }, 50);
@@ -131,7 +128,7 @@ export default function ReceiptUpload({
                 <ErrorState onClose={() => setShowViewer(false)} />
               ) : pdfData ? (
                 <div className="relative w-[92vw] h-[92vh]" onClick={(e) => e.stopPropagation()}>
-                  <PDFViewerComponent source={{ data: pdfData }} onClose={() => setShowViewer(false)} onError={() => setPdfError(true)} />
+                  <PDFViewerComponent source={{ url: `data:application/pdf;base64,${pdfData}` }} onClose={() => setShowViewer(false)} onError={() => setPdfError(true)} />
                 </div>
               ) : (
                 <LoadingState onCancel={() => setShowViewer(false)} />
