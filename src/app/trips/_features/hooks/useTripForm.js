@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { calculateMealAllowance } from '../utils/tripCalculations';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Camera, CameraResultType } from '@capacitor/camera';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { validateFile } from '@/utils/fileValidation';
 
@@ -15,6 +15,8 @@ const DEFAULT_COMMUTE = {
   public_transport: { active: false, cost: '' }
 };
 
+const DISTANCE_MODES = ['car', 'motorcycle', 'bike'];
+
 /**
  * Hook to manage trip form state and submission logic.
  */
@@ -22,7 +24,6 @@ export const useTripForm = () => {
   const { 
     tripEntries,
     addTripEntry, 
-    updateTripEntry,
     deleteTripEntry,
     taxRates, 
     getMileageRate, 
@@ -30,28 +31,10 @@ export const useTripForm = () => {
     calculateTransportSum
   } = useAppContext();
 
-  const [formData, setFormData] = useState({
-    destination: '',
-    date: '',
-    endDate: '',
-    startTime: '',
-    endTime: '',
-    employerExpenses: 0,
-    commute: DEFAULT_COMMUTE
-  });
-
-  const [autoAddStationTrips, setAutoAddStationTrips] = useState(true);
-  const [tempPublicTransportReceipt, setTempPublicTransportReceipt] = useState(null);
-  const [tempPublicTransportReceiptPath, setTempPublicTransportReceiptPath] = useState(null);
-  const [tempPublicTransportReceiptType, setTempPublicTransportReceiptType] = useState('image'); // 'image' or 'pdf'
-  const [editingId, setEditingId] = useState(null);
-  const [initialEditData, setInitialEditData] = useState(null);
-  const [initialReceiptPath, setInitialReceiptPath] = useState(null);
-
   const sanitizeCommute = (commute = {}) => {
     const next = { ...DEFAULT_COMMUTE, ...commute };
 
-    ['car', 'motorcycle', 'bike'].forEach((mode) => {
+    DISTANCE_MODES.forEach((mode) => {
       const rawDistance = parseFloat(commute[mode]?.distance);
       const distance = Number.isFinite(rawDistance) && rawDistance > 0 ? rawDistance : 0;
       next[mode] = {
@@ -75,6 +58,83 @@ export const useTripForm = () => {
     return next;
   };
 
+  const isSameCommute = (left, right) => (
+    JSON.stringify(sanitizeCommute(left)) === JSON.stringify(sanitizeCommute(right))
+  );
+
+  const hasTripDetails = (data = {}) => Boolean(
+    data.destination ||
+    data.date ||
+    data.endDate ||
+    data.startTime ||
+    data.endTime ||
+    Number(data.employerExpenses)
+  );
+
+  const createEmptyFormData = (commute = defaultCommute || DEFAULT_COMMUTE) => ({
+    destination: '',
+    date: '',
+    endDate: '',
+    startTime: '',
+    endTime: '',
+    employerExpenses: 0,
+    commute: sanitizeCommute(commute)
+  });
+
+  const reconstructCommuteFromTransportRecords = (transportRecords = []) => {
+    const reconstructedCommute = sanitizeCommute(DEFAULT_COMMUTE);
+
+    DISTANCE_MODES.forEach((mode) => {
+      const modeRecords = transportRecords.filter((record) => record.vehicleType === mode);
+      if (modeRecords.length > 0) {
+        const totalDistance = modeRecords.reduce((sum, record) => sum + (record.distance || 0), 0);
+        reconstructedCommute[mode] = {
+          active: totalDistance > 0,
+          distance: totalDistance
+        };
+      }
+    });
+
+    const publicTransportRecord = transportRecords.find((record) => record.vehicleType === 'public_transport');
+    if (publicTransportRecord) {
+      reconstructedCommute.public_transport = {
+        active: (publicTransportRecord.allowance || 0) > 0,
+        cost: publicTransportRecord.allowance || ''
+      };
+    }
+
+    return sanitizeCommute(reconstructedCommute);
+  };
+
+  const getEditCommute = (entry) => {
+    if (entry.isOngoing && entry.pendingCommute) {
+      return sanitizeCommute(entry.pendingCommute);
+    }
+
+    const transportRecords = entry.transportRecords || [];
+    if (transportRecords.length > 0) {
+      return reconstructCommuteFromTransportRecords(transportRecords);
+    }
+
+    if (entry.pendingCommute) {
+      return sanitizeCommute(entry.pendingCommute);
+    }
+
+    return sanitizeCommute(DEFAULT_COMMUTE);
+  };
+
+  const seededCommuteRef = useRef(sanitizeCommute(defaultCommute || DEFAULT_COMMUTE));
+
+  const [formData, setFormData] = useState(() => createEmptyFormData(seededCommuteRef.current));
+
+  const [autoAddStationTrips, setAutoAddStationTrips] = useState(true);
+  const [tempPublicTransportReceipt, setTempPublicTransportReceipt] = useState(null);
+  const [tempPublicTransportReceiptPath, setTempPublicTransportReceiptPath] = useState(null);
+  const [tempPublicTransportReceiptType, setTempPublicTransportReceiptType] = useState('image'); // 'image' or 'pdf'
+  const [editingId, setEditingId] = useState(null);
+  const [initialEditData, setInitialEditData] = useState(null);
+  const [initialReceiptPath, setInitialReceiptPath] = useState(null);
+
   // Load saved form data from local storage (excluding dates - they should start empty)
   useEffect(() => {
     const savedData = localStorage.getItem('TRIPS_FORM_DATA');
@@ -90,13 +150,6 @@ export const useTripForm = () => {
     }
   }, []);
 
-  // Sync commute with default settings
-  useEffect(() => {
-    if (defaultCommute) {
-      setFormData(prev => ({ ...prev, commute: defaultCommute }));
-    }
-  }, [defaultCommute]);
-
   // Save form data to local storage whenever it changes (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -110,32 +163,25 @@ export const useTripForm = () => {
 
   // Sync with default commute settings
   useEffect(() => {
-    if (defaultCommute) {
-      setAutoAddStationTrips(true);
-      setFormData(prev => ({
-        ...prev,
-        commute: {
-          ...prev.commute,
-          car: { 
-            active: defaultCommute.car.active, 
-            distance: prev.commute.car.distance || defaultCommute.car.distance 
-          },
-          motorcycle: { 
-            active: defaultCommute.motorcycle.active, 
-            distance: prev.commute.motorcycle.distance || defaultCommute.motorcycle.distance 
-          },
-          bike: { 
-            active: defaultCommute.bike.active, 
-            distance: prev.commute.bike.distance || defaultCommute.bike.distance 
-          },
-          public_transport: { 
-            active: defaultCommute.public_transport.active, 
-            cost: prev.commute.public_transport.cost || defaultCommute.public_transport.cost 
-          }
-        }
-      }));
+    if (!defaultCommute || editingId) {
+      return;
     }
-  }, [defaultCommute]);
+
+    const nextDefaultCommute = sanitizeCommute(defaultCommute);
+    const previousSeededCommute = seededCommuteRef.current;
+    seededCommuteRef.current = nextDefaultCommute;
+
+    setFormData((prev) => {
+      if (hasTripDetails(prev) || !isSameCommute(prev.commute, previousSeededCommute)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        commute: nextDefaultCommute
+      };
+    });
+  }, [defaultCommute, editingId]);
 
   const [submitError, setSubmitError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -474,11 +520,12 @@ export const useTripForm = () => {
     // Calculate sum of transport allowances
     const sumTransportAllowances = calculateTransportSum(transportRecords);
 
-    // Destructure to exclude commute - it's only for UI, not for storage
+    // Keep raw commute in form state only; ongoing trips persist a sanitized snapshot for later editing.
     const { commute, ...tripDataWithoutCommute } = formData;
     
     addTripEntry({
       ...tripDataWithoutCommute,
+      ...(isOngoing ? { pendingCommute: sanitizedCommute } : {}),
       id: tripId,
       endDate: isOngoing ? '' : finalEndDate,
       endTime: isOngoing ? '' : formData.endTime,
@@ -490,15 +537,9 @@ export const useTripForm = () => {
     });
 
     // Reset form
-    setFormData({
-      destination: '',
-      date: '',
-      endDate: '',
-      startTime: '',
-      endTime: '',
-      employerExpenses: 0,
-      commute: defaultCommute || DEFAULT_COMMUTE
-    });
+    const nextDefaultCommute = sanitizeCommute(defaultCommute || DEFAULT_COMMUTE);
+    seededCommuteRef.current = nextDefaultCommute;
+    setFormData(createEmptyFormData(nextDefaultCommute));
     
     setTempPublicTransportReceipt(null);
     setTempPublicTransportReceiptPath(null);
@@ -516,31 +557,8 @@ export const useTripForm = () => {
 };
 
   const startEdit = async (entry) => {
-    // Reconstruct commute from transportRecords for editing
-    const reconstructedCommute = { ...DEFAULT_COMMUTE };
     const transportRecords = entry.transportRecords || [];
-    
-    // Extract commute info from transportRecords
-    ['car', 'motorcycle', 'bike'].forEach(mode => {
-      const modeRecords = transportRecords.filter(r => r.vehicleType === mode);
-      if (modeRecords.length > 0) {
-        // Sum distances (they were split into 2 records)
-        const totalDistance = modeRecords.reduce((sum, r) => sum + (r.distance || 0), 0);
-        reconstructedCommute[mode] = {
-          active: true,
-          distance: totalDistance
-        };
-      }
-    });
-    
-    const publicTransportRecord = transportRecords.find(r => r.vehicleType === 'public_transport');
-    if (publicTransportRecord) {
-      reconstructedCommute.public_transport = {
-        active: true,
-        cost: publicTransportRecord.allowance || ''
-      };
-    }
-    
+
     const editData = {
       destination: entry.destination || '',
       date: entry.date || '',
@@ -548,7 +566,7 @@ export const useTripForm = () => {
       startTime: entry.startTime || '',
       endTime: entry.endTime || '',
       employerExpenses: entry.employerExpenses || 0,
-      commute: reconstructedCommute
+      commute: getEditCommute(entry)
     };
     
     // Restore receipt if exists from nested transportRecords
@@ -642,15 +660,9 @@ export const useTripForm = () => {
     setTempPublicTransportReceiptPath(null);
     
     // Reset to defaults for new entry
-    setFormData({
-      destination: '',
-      date: '',
-      endDate: '',
-      startTime: '',
-      endTime: '',
-      employerExpenses: 0,
-      commute: defaultCommute || DEFAULT_COMMUTE
-    });
+    const nextDefaultCommute = sanitizeCommute(defaultCommute || DEFAULT_COMMUTE);
+    seededCommuteRef.current = nextDefaultCommute;
+    setFormData(createEmptyFormData(nextDefaultCommute));
   };
 
   return { 

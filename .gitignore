@@ -30,6 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# android local sdk config
+android/local.properties
+
 # env files (can opt-in for committing if needed)
 .env*
 
