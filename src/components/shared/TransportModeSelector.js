@@ -145,7 +145,7 @@ export default function TransportModeSelector({
  * @property {string} mode - Transport mode key
  * @property {number} distance - Current distance value (total)
  * @property {Function} onChange - Callback when distance changes (receives new total distance)
- * @property {number} [maxDistance] - Maximum distance in km (default: 30)
+ * @property {number} [maxDistance] - Maximum distance in km (default: 50)
  * @property {string} [helpText] - Help text to display below slider
  */
 
@@ -159,7 +159,7 @@ export function DistanceSlider({
   mode,
   distance,
   onChange,
-  maxDistance = 30,
+  maxDistance = 50,
   helpText = 'Gesamtstrecke (Hin- und Rückfahrt)'
 }) {
   const colors = TRANSPORT_COLORS[mode] || TRANSPORT_COLORS.car;
@@ -202,7 +202,7 @@ export function DistanceSliderCompact({
   mode,
   distance,
   onChange,
-  maxDistance = 30
+  maxDistance = 50
 }) {
   const displayDistance = distance;
   

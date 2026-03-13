@@ -49,7 +49,7 @@ export default function CommuteSettings({ localDefaultCommute, setLocalDefaultCo
               mode="car"
               distance={localDefaultCommute.car.distance}
               onChange={(val) => handleDistanceChange('car', val)}
-              maxDistance={30}
+              maxDistance={50}
             />
           )}
 
