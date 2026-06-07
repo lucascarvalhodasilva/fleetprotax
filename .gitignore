@@ -44,3 +44,6 @@ android/app/release-keystore.jks
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local helper scripts (not tracked)
+scripts/generate-android-signing-secrets.sh
