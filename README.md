@@ -315,6 +315,28 @@ npm run export
 2. Signiertes APK/AAB generieren
 3. Zu Google Play Console hochladen
 
+### GitHub APK Releases (Automatisch)
+
+Dieses Repository enthält einen Workflow, der bei Tags wie `v1.0.0` automatisch ein signiertes Release-APK baut und als GitHub Release hochlädt.
+
+Workflow-Datei:
+- `.github/workflows/android-github-release.yml`
+
+Erforderliche GitHub Repository Secrets:
+- `ANDROID_KEYSTORE_BASE64` (Base64-Inhalt Ihrer `.jks` Datei)
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+Release auslösen:
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Optional (manuell):
+- GitHub Actions > "Android GitHub Release" > Run workflow
+
 ---
 
 ## 🤝 Mitwirken

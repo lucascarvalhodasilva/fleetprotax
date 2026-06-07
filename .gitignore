@@ -32,6 +32,8 @@ yarn-error.log*
 
 # android local sdk config
 android/local.properties
+android/keystore.properties
+android/app/release-keystore.jks
 
 # env files (can opt-in for committing if needed)
 .env*
